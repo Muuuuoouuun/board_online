@@ -4,6 +4,8 @@ import { getEngine, type GameId, type Move, type PlayerIndex } from "@board-onli
 import { emitAck, socket } from "../lib/socket.js";
 import { getSeatToken, setSeatToken } from "../lib/storage.js";
 import Board from "../components/Board.js";
+import RulesModal from "../components/RulesModal.js";
+import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 
 interface RoomData {
   gameId: GameId;
@@ -20,6 +22,8 @@ export default function Room() {
   const [error, setError] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [resultDismissed, setResultDismissed] = useState(false);
 
   const syncRoom = useCallback(async () => {
     const token = getSeatToken(code);
@@ -48,6 +52,11 @@ export default function Room() {
       socket.off("room:state", onState);
     };
   }, [code, syncRoom]);
+
+  const statusKey = roomData ? `${engineStatusKey(roomData)}` : "";
+  useEffect(() => {
+    setResultDismissed(false);
+  }, [statusKey]);
 
   async function handleMove(move: Move) {
     setMoveError(null);
@@ -94,16 +103,24 @@ export default function Room() {
   const waitingForOpponent = roomData.players.length < 2;
 
   let statusText: string;
-  if (status.status === "win") {
-    statusText = status.winner === you ? `승리했습니다! (${status.reason})` : `패배했습니다. (${status.reason})`;
-  } else if (status.status === "draw") {
-    statusText = `무승부 (${status.reason})`;
+  if (status.status !== "ongoing") {
+    statusText = "";
   } else if (waitingForOpponent) {
     statusText = "친구가 들어오길 기다리는 중...";
   } else if (!opponent?.connected) {
     statusText = "상대방의 연결이 끊겼습니다. 잠시만 기다려주세요.";
   } else {
     statusText = myTurn ? "당신의 차례입니다" : "상대방의 차례입니다";
+  }
+
+  let resultKind: ResultKind = "draw";
+  let resultTitle = "";
+  if (status.status === "win") {
+    resultKind = status.winner === you ? "win" : "lose";
+    resultTitle = status.winner === you ? "승리했습니다!" : "패배했습니다";
+  } else if (status.status === "draw") {
+    resultKind = "draw";
+    resultTitle = "무승부";
   }
 
   return (
@@ -117,10 +134,21 @@ export default function Room() {
         </div>
       </div>
 
+      <div className="toolbar">
+        <button className="secondary-btn" onClick={() => setShowRules(true)}>
+          규칙 보기
+        </button>
+        {status.status !== "ongoing" && resultDismissed && (
+          <button className="rematch-btn" onClick={handleRematch}>
+            다시 하기
+          </button>
+        )}
+      </div>
+
       <p className="you-label">
         나는 <strong>{engine.meta.playerLabels[you]}</strong>입니다
       </p>
-      <p className="status-text">{statusText}</p>
+      {statusText && <p className="status-text">{statusText}</p>}
       {moveError && <p className="error-text">{moveError}</p>}
 
       <div className="board-wrap">
@@ -133,15 +161,25 @@ export default function Room() {
         />
       </div>
 
-      {status.status !== "ongoing" && (
-        <button className="rematch-btn" onClick={handleRematch}>
-          다시 하기
-        </button>
-      )}
-
       <Link to="/" className="leave-link">
         홈으로
       </Link>
+
+      <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={roomData.gameId} />
+      <ResultModal
+        open={status.status !== "ongoing" && !resultDismissed}
+        kind={resultKind}
+        title={resultTitle}
+        subtitle={status.reason}
+        onRematch={handleRematch}
+        onClose={() => setResultDismissed(true)}
+      />
     </div>
   );
+}
+
+function engineStatusKey(roomData: RoomData): string {
+  const engine = getEngine(roomData.gameId);
+  const status = engine.status(roomData.state);
+  return `${status.status}:${status.winner}:${status.reason}`;
 }
