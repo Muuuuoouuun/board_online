@@ -84,6 +84,71 @@ function GameMotif({ id }: { id: GameId }) {
         </>
       )}
 
+      {id === "yut" && (
+        <>
+          <rect x="12" y="12" width="40" height="40" rx="2" fill="none" stroke="#8a6a45" strokeWidth="1.6" />
+          <line x1="12" y1="12" x2="52" y2="52" stroke="#c9b48c" strokeWidth="1.2" />
+          <line x1="52" y1="12" x2="12" y2="52" stroke="#c9b48c" strokeWidth="1.2" />
+          <g fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2">
+            <circle cx="12" cy="12" r="4.6" />
+            <circle cx="52" cy="12" r="4.6" />
+            <circle cx="12" cy="52" r="4.6" />
+            <circle cx="52" cy="52" r="4.6" />
+            <circle cx="32" cy="32" r="5.2" />
+          </g>
+          <circle cx="32" cy="12" r="3.4" fill="#2b2620" />
+          <circle cx="12" cy="32" r="3.4" fill="#b3261e" />
+        </>
+      )}
+
+      {id === "gonu" && (
+        <>
+          <g stroke="#8a6a45" strokeWidth="1.6" fill="none">
+            <rect x="14" y="14" width="36" height="36" />
+            <line x1="32" y1="14" x2="32" y2="50" />
+            <line x1="14" y1="32" x2="50" y2="32" />
+          </g>
+          <circle cx="14" cy="14" r="5" fill="#2b2620" />
+          <circle cx="50" cy="14" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
+          <circle cx="14" cy="50" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
+          <circle cx="50" cy="50" r="5" fill="#2b2620" />
+        </>
+      )}
+
+      {id === "territory" && (
+        <>
+          <rect x="8" y="8" width="48" height="48" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
+          <path d="M8 8 H32 V20 H20 V32 H8 Z" fill="#2f6bff" opacity="0.75" />
+          <path d="M56 56 H32 V44 H44 V32 H56 Z" fill="#d4622a" opacity="0.75" />
+          <polyline
+            points="32,20 40,20 40,28 32,28"
+            fill="none"
+            stroke="#2f6bff"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="3 2.5"
+          />
+        </>
+      )}
+
+      {id === "flick" && (
+        <>
+          <rect x="8" y="8" width="48" height="48" rx="3" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
+          <path d="M8 8 A24 24 0 0 1 32 32 L8 32 Z" fill="#2f6bff" opacity="0.7" />
+          <path d="M56 56 A20 20 0 0 0 36 36 L56 36 Z" fill="#d4622a" opacity="0.7" />
+          <polyline
+            points="18,24 34,18 44,30"
+            fill="none"
+            stroke="#5c3d21"
+            strokeWidth="1.8"
+            strokeDasharray="3 2"
+            strokeLinecap="round"
+          />
+          <circle cx="44" cy="30" r="4.6" fill="#2b2620" />
+        </>
+      )}
+
       {id === "reversi" && (
         <>
           <g stroke="#c9b48c" strokeWidth="1.2">
