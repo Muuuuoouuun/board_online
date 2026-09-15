@@ -1,0 +1,16 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# Pointing Render at this repo picks this up and creates the service.
+#
+# Socket.IO needs a connection that stays open, so this must run as a web
+# service on an always-on instance — not a serverless/edge target. On Render's
+# free plan the instance sleeps after inactivity: the first visitor then waits
+# through a cold start, and because rooms live in memory, any game in progress
+# when it sleeps is lost.
+services:
+  - type: web
+    name: board-online
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true

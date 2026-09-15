@@ -70,16 +70,37 @@ npm run build   # client(dist) 빌드 후 server가 그 dist를 서빙하도록 
 npm start       # PORT 환경변수(기본 3001)로 단일 프로세스 실행
 ```
 
-- 별도 DB가 없으므로 서버를 재시작하면 진행 중이던 모든 방이 사라집니다(의도된 MVP 제약).
-- Socket.IO는 상시 연결이 필요하므로 서버가 완전히 슬립되는 프리티어(예: 일부 서버리스)에는
-  적합하지 않습니다. 컨테이너/VM 기반의 상시 구동 무료·저가 플랜을 사용하세요.
+### Docker로 올리기 (어느 호스팅이든 동일)
+
+`Dockerfile` 하나로 빌드부터 실행까지 끝납니다.
+
+```bash
+docker build -t board-online .
+docker run -p 3001:3001 board-online
+```
+
+- **Render** — 이 저장소를 Render에 연결하면 `render.yaml`을 읽어 서비스를 자동 생성합니다.
+- **Fly.io** — `fly launch` (Dockerfile을 감지합니다) 후 `fly deploy`.
+- **Railway / Cloud Run** — 저장소를 연결하면 Dockerfile을 그대로 사용합니다.
+
+서버는 `PORT` 환경변수를 읽으므로 호스팅이 지정하는 포트를 그대로 따릅니다.
+
+### 배포 전에 알아둘 제약
+
+- **상시 구동이 필요합니다.** Socket.IO는 연결을 계속 열어두므로 서버리스/엣지 타깃에는
+  맞지 않습니다. 컨테이너·VM 기반 플랜을 쓰세요.
+- **방은 메모리에만 있습니다.** 서버가 재시작되거나 프리티어 인스턴스가 슬립하면 진행 중이던
+  대국이 전부 사라집니다(의도된 MVP 제약). 프리티어는 첫 방문자가 콜드 스타트를 기다립니다.
+- **서버는 `tsx`로 TypeScript를 직접 실행합니다.** 별도 컴파일 단계가 없어서 `tsx`가
+  devDependency가 아니라 server의 **런타임 dependency**입니다 — 프로덕션 설치에서 빼면
+  서버가 뜨지 않습니다.
 
 ## 지금 MVP가 의도적으로 하지 않는 것
 
 - 로그인/계정, 전적, 레이팅, 랭킹
 - 관전, 채팅, 친구 목록
 - AI(컴퓨터) 상대
-- 장기 상마 배치 선택 (기본 배치 1종만 고정)
+- 마작
 - 체스 무승부 제안/기권, 기보 저장
 
 전부 "공통 게임 엔진 + 게임 카탈로그" 구조 위에서 자연스럽게 얹을 수 있도록
@@ -87,9 +108,23 @@ npm start       # PORT 환경변수(기본 3001)로 단일 프로세스 실행
 
 ## 게임 추가 가이드
 
-1. `packages/shared/src/games/<game>.ts`에 `GameEngine<TState>`를 구현
+1. `packages/shared/src/games/<game>.ts`에 `GameEngine<TState, TMove>`를 구현
 2. `packages/shared/src/index.ts`의 `ENGINES`, `GAME_LIST`에 등록
-3. 클라이언트/서버 코드는 수정할 필요 없음 — `<Board>`와 룸 서버가 `GameEngine`
+3. **격자 게임이면 여기서 끝입니다** — 서버와 범용 `<Board>`가 `GameEngine`
    인터페이스만으로 자동 동작합니다.
-4. 새 게임을 추가하기 전에 규칙(아이디어)과 특정 회사의 구체적 표현물(아트·카드
-   텍스트·로고)을 구분해서, 후자를 베끼지 않았는지 확인하세요.
+4. 격자가 아닌 보드라면 `meta.renderer`에 이름을 선언하고,
+   `packages/client/src/components/boards/`에 `GameViewProps`를 받는 렌더러를 만든 뒤
+   `GameView.tsx`의 분기에 추가하세요 (윷놀이·땅따먹기가 이 방식입니다).
+5. 규칙 텍스트는 `packages/client/src/lib/rules.*.ts`에 두고 `rules.ts`에서 합칩니다.
+
+엔진을 쓸 때 지켜야 할 것:
+
+- **상태는 JSON 직렬화 가능해야 합니다** — Socket.IO로 오가고 서버 메모리에 보관됩니다.
+  `Map`/`Set`/클래스 인스턴스 금지.
+- **무작위는 반드시 `rng` 파라미터를 통해서** 쓰세요 (`const random = rng ?? Math.random`).
+  서버가 자기 RNG를 넘기므로 서버 권위가 유지되고, 시드를 고정하면 테스트가 재현됩니다.
+- `legalMoves`가 내놓은 수는 `applyMove`가 반드시 받아야 합니다. 자체 테스트가 이를 퍼징합니다.
+- 잘못된 수는 예외를 던지지 말고 `{ ok: false }`로 거부하세요. 네트워크에서 들어오는
+  수는 `applyMoveSafely` 경계를 거치지만, 엔진도 스스로 방어하는 편이 낫습니다.
+- 새 게임을 추가하기 전에 규칙(아이디어)과 특정 회사의 구체적 표현물(아트·카드
+  텍스트·로고)을 구분해서, 후자를 베끼지 않았는지 확인하세요.
