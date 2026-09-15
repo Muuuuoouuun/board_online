@@ -9,7 +9,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test:engine": "tsx src/selftest.ts"
+    "test:engine": "tsx src/selftest.ts",
+    "test:ai": "tsx src/ai/selftest-ai.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "chess.js": "^1.4.0"

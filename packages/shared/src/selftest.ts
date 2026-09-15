@@ -7,7 +7,7 @@ import { flickEngine } from "./games/flick.js";
 import { gonuEngine } from "./games/gonu.js";
 import { yutEngine } from "./games/yut.js";
 import { territoryEngine } from "./games/territory.js";
-import type { GameEngine, Move } from "./types.js";
+import type { BaseState, GameEngine, Move } from "./types.js";
 import { applyMoveSafely } from "./index.js";
 
 let failures = 0;
@@ -194,7 +194,7 @@ function ok(msg: string) {
 }
 
 // --- Generic smoke test: play random legal moves for a while on every engine, no crash ---
-function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number) {
+function randomPlaythrough<TState extends BaseState, TMove>(engine: GameEngine<TState, TMove>, maxPlies: number) {
   let state = engine.createInitialState();
   let plies = 0;
   let lastTurn = engine.turn(state);

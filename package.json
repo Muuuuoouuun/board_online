@@ -2,7 +2,7 @@
   "name": "board-online",
   "private": true,
   "version": "0.1.0",
-  "description": "무료 온라인 보드게임 플랫폼 MVP - 오목, 체스, 장기, 체커, 리버시",
+  "description": "무료 온라인 보드게임 플랫폼 MVP - 오목, 체스, 장기, 체커, 리버시, 고누, 윷놀이, 땅따먹기",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -12,7 +12,9 @@
     "dev:client": "npm run dev -w @board-online/client",
     "build": "npm run build -w @board-online/client",
     "start": "npm run start -w @board-online/server",
-    "test:engine": "npm run test:engine -w @board-online/shared"
+    "test:engine": "npm run test:engine -w @board-online/shared",
+    "test:ai": "npm run test:ai -w @board-online/shared",
+    "typecheck": "npm run typecheck -w @board-online/shared && npm run typecheck -w @board-online/server && npm run typecheck -w @board-online/client"
   },
   "engines": {
     "node": ">=18"

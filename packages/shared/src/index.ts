@@ -70,3 +70,6 @@ export function applyMoveSafely<TState extends BaseState, TMove>(
     return { ok: false, state, error: "둘 수 없는 이동입니다.", status: engine.status(state) };
   }
 }
+
+export { seededRng } from "./rng.js";
+export * from "./ai/index.js";
