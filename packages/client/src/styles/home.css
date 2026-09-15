@@ -385,3 +385,30 @@
     transform: none;
   }
 }
+
+.home-card-setup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b5640;
+}
+
+.home-card-setup select {
+  flex: 0 1 auto;
+  border: 1px solid #e0d2ba;
+  border-radius: 8px;
+  background: #fffdf8;
+  font: inherit;
+  color: #3f342a;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.home-card-setup select:focus-visible {
+  outline: 2px solid #2f6bff;
+  outline-offset: 1px;
+}

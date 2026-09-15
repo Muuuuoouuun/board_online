@@ -386,6 +386,27 @@ button:hover:not(:disabled) {
   color: #323f4b;
 }
 
+.toolbar-setup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e4e7eb;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  color: #52606d;
+  font-weight: 600;
+}
+
+.toolbar-setup select {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: #323f4b;
+  padding: 8px 2px;
+  cursor: pointer;
+}
+
 .secondary-btn:hover:not(:disabled) {
   background: #cbd2d9;
 }

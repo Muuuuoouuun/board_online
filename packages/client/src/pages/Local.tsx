@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getEngine, isGameId, type GameId, type Move } from "@board-online/shared";
 import Board from "../components/Board.js";
 import RulesModal from "../components/RulesModal.js";
@@ -8,6 +8,7 @@ import SoundToggle from "../components/SoundToggle.js";
 
 export default function Local() {
   const params = useParams<{ gameId: string }>();
+  const [searchParams] = useSearchParams();
   const gameId = params.gameId ?? "";
 
   if (!isGameId(gameId)) {
@@ -19,12 +20,14 @@ export default function Local() {
     );
   }
 
-  return <LocalGame gameId={gameId} />;
+  return <LocalGame gameId={gameId} initialSetup={searchParams.get("setup") ?? undefined} />;
 }
 
-function LocalGame({ gameId }: { gameId: GameId }) {
+function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: string }) {
   const engine = useMemo(() => getEngine(gameId), [gameId]);
-  const [state, setState] = useState(() => engine.createInitialState());
+  const setupOptions = engine.meta.setupOptions;
+  const [setupId, setSetupId] = useState(() => initialSetup ?? setupOptions?.[0].id);
+  const [state, setState] = useState(() => engine.createInitialState(initialSetup));
   const [showRules, setShowRules] = useState(false);
   const [resultDismissed, setResultDismissed] = useState(false);
 
@@ -44,7 +47,12 @@ function LocalGame({ gameId }: { gameId: GameId }) {
   }
 
   function handleReset() {
-    setState(engine.createInitialState());
+    setState(engine.createInitialState(setupId));
+  }
+
+  function handleSetupChange(next: string) {
+    setSetupId(next);
+    setState(engine.createInitialState(next));
   }
 
   let resultKind: ResultKind = "draw";
@@ -66,6 +74,18 @@ function LocalGame({ gameId }: { gameId: GameId }) {
           규칙 보기
         </button>
         <SoundToggle />
+        {setupOptions && (
+          <label className="toolbar-setup">
+            <span>배치</span>
+            <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
+              {setupOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {status.status !== "ongoing" && resultDismissed && (
           <button className="rematch-btn" onClick={handleReset}>
             처음부터 다시

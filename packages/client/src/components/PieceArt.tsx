@@ -13,7 +13,8 @@
  */
 
 export interface PieceArtProps {
-  game: "gomoku" | "chess" | "janggi" | "checkers" | "reversi";
+  /** Games with their own renderer draw their own pieces, so those ids fall through to null. */
+  game: string;
   owner: 0 | 1;
   glyph: string;
   highlight?: boolean;
@@ -321,13 +322,15 @@ function ChessPiece({
 /* ------------------------------------------------------------------ */
 
 const JANGGI_RANK_SCALE: Record<string, number> = {
-  궁: 1.18,
-  차: 1.06,
-  포: 1.06,
-  마: 1.0,
-  상: 1.0,
-  사: 0.9,
-  졸: 0.86,
+  楚: 1.18,
+  漢: 1.18,
+  車: 1.06,
+  包: 1.06,
+  馬: 1.0,
+  象: 1.0,
+  士: 0.9,
+  卒: 0.86,
+  兵: 0.86,
 };
 
 function JanggiTile({

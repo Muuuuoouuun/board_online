@@ -5,7 +5,7 @@ interface GameRules {
   points: string[];
 }
 
-export const RULES: Record<GameId, GameRules> = {
+export const RULES: Partial<Record<GameId, GameRules>> = {
   gomoku: {
     title: "오목",
     points: [
@@ -32,6 +32,8 @@ export const RULES: Record<GameId, GameRules> = {
       "차는 직선과 궁성 대각선으로 멀리 움직이고, 포는 다른 기물을 정확히 하나 넘어야 움직이며 포끼리는 서로 넘을 수 없습니다.",
       "마는 바로 앞 한 칸(다리)이 막히면 못 움직이고, 상은 다리와 그다음 칸(눈)이 모두 비어 있어야 움직일 수 있습니다.",
       "상대의 궁을 외통(체크메이트)시키면 승리합니다.",
+      "기물은 전통 한자로 표기합니다. 초는 楚·卒, 한은 漢·兵을 쓰고 나머지는 車 包 馬 象 士로 같습니다.",
+      "시작 전 마상 배치를 마상상마·상마마상·마상마상·상마상마 중에서 고를 수 있습니다.",
     ],
   },
   checkers: {

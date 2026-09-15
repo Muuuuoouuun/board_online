@@ -109,11 +109,12 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState("");
   const [busyGame, setBusyGame] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [setupChoice, setSetupChoice] = useState<Record<string, string>>({});
 
   async function handleCreate(gameId: string) {
     setBusyGame(gameId);
     setError(null);
-    const res = await emitAck<any>("room:create", { gameId });
+    const res = await emitAck<any>("room:create", { gameId, setupId: setupChoice[gameId] });
     setBusyGame(null);
     if (!res.ok) {
       setError(res.error ?? "방을 만들지 못했습니다.");
@@ -184,11 +185,29 @@ export default function Home() {
                 <h2 className="home-card-title">{engine.meta.nameKo}</h2>
                 <span className="home-card-players">{engine.meta.playerLabels.join(" vs ")}</span>
               </div>
+              {engine.meta.setupOptions && (
+                <label className="home-card-setup">
+                  <span>시작 배치</span>
+                  <select
+                    value={setupChoice[id] ?? engine.meta.setupOptions[0].id}
+                    onChange={(e) => setSetupChoice((prev) => ({ ...prev, [id]: e.target.value }))}
+                  >
+                    {engine.meta.setupOptions.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div className="home-card-actions">
                 <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
                   {busy ? "방 만드는 중..." : "친구와 온라인으로"}
                 </button>
-                <Link className="home-card-secondary" to={`/local/${id}`}>
+                <Link
+                  className="home-card-secondary"
+                  to={setupChoice[id] ? `/local/${id}?setup=${encodeURIComponent(setupChoice[id])}` : `/local/${id}`}
+                >
                   같은 화면 2인 플레이
                 </Link>
               </div>

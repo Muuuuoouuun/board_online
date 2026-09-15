@@ -28,17 +28,47 @@ export interface JanggiState {
   status: "ongoing" | "win" | "draw";
   winner: PlayerIndex | null;
   reason: string;
+  formation: Formation;
 }
 
-const GLYPH: Record<PieceType, string> = {
-  general: "궁",
-  guard: "사",
-  chariot: "차",
-  cannon: "포",
-  horse: "마",
-  elephant: "상",
-  soldier: "졸",
+/** Traditional hanja. The two sides use different characters for general and soldier. */
+function glyphFor(type: PieceType, owner: PlayerIndex): string {
+  switch (type) {
+    case "general":
+      return owner === 0 ? "楚" : "漢";
+    case "soldier":
+      return owner === 0 ? "卒" : "兵";
+    case "guard":
+      return "士";
+    case "chariot":
+      return "車";
+    case "cannon":
+      return "包";
+    case "horse":
+      return "馬";
+    case "elephant":
+      return "象";
+  }
+}
+
+/**
+ * The 마상 setup: each side may swap its horses and elephants. Named by the
+ * back-rank sequence read from that player's own side, left to right.
+ */
+export type Formation = "마상상마" | "상마마상" | "마상마상" | "상마상마";
+
+const FORMATIONS: Record<Formation, [PieceType, PieceType, PieceType, PieceType]> = {
+  마상상마: ["horse", "elephant", "elephant", "horse"],
+  상마마상: ["elephant", "horse", "horse", "elephant"],
+  마상마상: ["horse", "elephant", "horse", "elephant"],
+  상마상마: ["elephant", "horse", "elephant", "horse"],
 };
+
+const DEFAULT_FORMATION: Formation = "상마마상";
+
+function isFormation(id: string): id is Formation {
+  return id in FORMATIONS;
+}
 
 function inB(x: number, y: number): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
@@ -296,10 +326,16 @@ function legalMovesFor(board: Board, player: PlayerIndex): Move[] {
   return legal;
 }
 
-function initialBoard(): Board {
+function initialBoard(formation: Formation): Board {
   const board: Board = Array.from({ length: HEIGHT }, () => Array<Cell>(WIDTH).fill(null));
+  const [a, b, c, d] = FORMATIONS[formation];
   const backRank: (PieceType | null)[] = [
-    "chariot", "elephant", "horse", "guard", null, "guard", "horse", "elephant", "chariot",
+    "chariot", a, b, "guard", null, "guard", c, d, "chariot",
+  ];
+  // Player 1 sits across the board, so the same formation from their own point
+  // of view is the mirror of it in absolute coordinates.
+  const mirroredBackRank: (PieceType | null)[] = [
+    "chariot", d, c, "guard", null, "guard", b, a, "chariot",
   ];
   const place = (x: number, y: number, owner: PlayerIndex, type: PieceType) => {
     board[y][x] = { owner, type };
@@ -315,7 +351,7 @@ function initialBoard(): Board {
   [0, 2, 4, 6, 8].forEach((x) => place(x, 6, 0, "soldier"));
 
   // Player 1 (Han) at the top, back rank y=0, advancing toward y=9.
-  backRank.forEach((type, x) => {
+  mirroredBackRank.forEach((type, x) => {
     if (type) place(x, 0, 1, type);
   });
   place(4, 1, 1, "general");
@@ -344,10 +380,27 @@ export const janggiEngine: GameEngine<JanggiState> = {
     gridStyle: "intersection",
     playerLabels: ["초", "한"],
     decorations: palaceDecorations(),
+    // The first entry must stay in sync with DEFAULT_FORMATION: the pickers show
+    // this option before the player touches them, and it has to match the board
+    // the engine actually builds when no setup id is supplied.
+    setupOptions: [
+      { id: "상마마상", label: "상마마상", description: "안쪽에 마, 바깥쪽에 상 (기본)" },
+      { id: "마상상마", label: "마상상마", description: "안쪽에 상, 바깥쪽에 마" },
+      { id: "마상마상", label: "마상마상", description: "양쪽 모두 마-상 순서" },
+      { id: "상마상마", label: "상마상마", description: "양쪽 모두 상-마 순서" },
+    ],
   },
 
-  createInitialState(): JanggiState {
-    return { board: initialBoard(), turn: 0, status: "ongoing", winner: null, reason: "" };
+  createInitialState(setupId?: string): JanggiState {
+    const formation = setupId && isFormation(setupId) ? setupId : DEFAULT_FORMATION;
+    return {
+      board: initialBoard(formation),
+      turn: 0,
+      status: "ongoing",
+      winner: null,
+      reason: "",
+      formation,
+    };
   },
 
   turn(state) {
@@ -395,7 +448,7 @@ export const janggiEngine: GameEngine<JanggiState> = {
       reason = isInCheck(board, opponent) ? "외통장군 (체크메이트)" : "상대방이 더 이상 둘 수 있는 수가 없습니다";
     }
 
-    const nextState: JanggiState = { board, turn: opponent, status, winner, reason };
+    const nextState: JanggiState = { board, turn: opponent, status, winner, reason, formation: state.formation };
     return { ok: true, state: nextState, status: { status, winner, reason } };
   },
 
@@ -404,7 +457,7 @@ export const janggiEngine: GameEngine<JanggiState> = {
     for (let y = 0; y < HEIGHT; y++) {
       for (let x = 0; x < WIDTH; x++) {
         const p = state.board[y][x];
-        if (p) out.push({ pos: { x, y }, owner: p.owner, glyph: GLYPH[p.type], highlight: p.type === "general" });
+        if (p) out.push({ pos: { x, y }, owner: p.owner, glyph: glyphFor(p.type, p.owner), highlight: p.type === "general" });
       }
     }
     return out;

@@ -93,6 +93,60 @@ function ok(msg: string) {
   ok(`janggi opening facts verified (${legal.length} total legal moves for Cho)`);
 }
 
+// --- Janggi 마상 formations: each option must place the horses/elephants it names ---
+{
+  const expected: Record<string, [string, string, string, string]> = {
+    마상상마: ["horse", "elephant", "elephant", "horse"],
+    상마마상: ["elephant", "horse", "horse", "elephant"],
+    마상마상: ["horse", "elephant", "horse", "elephant"],
+    상마상마: ["elephant", "horse", "elephant", "horse"],
+  };
+  for (const [formation, want] of Object.entries(expected)) {
+    const state = janggiEngine.createInitialState(formation);
+    const at = (x: number, y: number) => state.board[y][x]?.type ?? "empty";
+    const got = [at(1, 9), at(2, 9), at(6, 9), at(7, 9)];
+    assert(
+      JSON.stringify(got) === JSON.stringify(want),
+      `janggi ${formation}: Cho back rank should be ${want.join(",")}, got ${got.join(",")}`,
+    );
+    // Player 1 sits opposite, so their rank is the mirror in absolute coordinates.
+    const mirrored = [at(7, 0), at(6, 0), at(2, 0), at(1, 0)];
+    assert(
+      JSON.stringify(mirrored) === JSON.stringify(want),
+      `janggi ${formation}: Han back rank should mirror Cho's, got ${mirrored.join(",")}`,
+    );
+    const pieceCount = janggiEngine.pieces(state).length;
+    assert(pieceCount === 32, `janggi ${formation}: expected 32 pieces, got ${pieceCount}`);
+  }
+  const fallback = janggiEngine.createInitialState("존재하지않는배치");
+  assert(fallback.formation === "상마마상", "janggi: unknown setup id should fall back to the default formation");
+  // The pickers display setupOptions[0] before the player touches them, so it has
+  // to describe the same board the engine builds with no setup id.
+  const firstOption = janggiEngine.meta.setupOptions?.[0].id;
+  assert(
+    firstOption === fallback.formation,
+    `janggi: setupOptions[0] (${firstOption}) must match the default formation (${fallback.formation})`,
+  );
+  ok("janggi formations: all 4 setups place horses/elephants correctly and mirror for Han");
+}
+
+// --- Janggi hanja glyphs: the two sides use different characters for general and soldier ---
+{
+  const state = janggiEngine.createInitialState();
+  const glyphs = janggiEngine.pieces(state);
+  const choGeneral = glyphs.find((p) => p.owner === 0 && p.highlight);
+  const hanGeneral = glyphs.find((p) => p.owner === 1 && p.highlight);
+  assert(choGeneral?.glyph === "楚", `janggi: Cho general should be 楚, got ${choGeneral?.glyph}`);
+  assert(hanGeneral?.glyph === "漢", `janggi: Han general should be 漢, got ${hanGeneral?.glyph}`);
+  const choSoldier = glyphs.find((p) => p.owner === 0 && p.pos.y === 6);
+  const hanSoldier = glyphs.find((p) => p.owner === 1 && p.pos.y === 3);
+  assert(choSoldier?.glyph === "卒", `janggi: Cho soldier should be 卒, got ${choSoldier?.glyph}`);
+  assert(hanSoldier?.glyph === "兵", `janggi: Han soldier should be 兵, got ${hanSoldier?.glyph}`);
+  const hanjaOnly = glyphs.every((p) => /[楚漢士車包馬象卒兵]/.test(p.glyph));
+  assert(hanjaOnly, "janggi: every piece should render as hanja");
+  ok("janggi hanja glyphs verified (楚/漢 generals, 卒/兵 soldiers)");
+}
+
 // --- Generic smoke test: play random legal moves for a while on every engine, no crash ---
 function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number) {
   let state = engine.createInitialState();

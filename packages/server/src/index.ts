@@ -44,13 +44,13 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("room:create", (payload: { gameId?: string }, ack?: (res: unknown) => void) => {
+  socket.on("room:create", (payload: { gameId?: string; setupId?: string }, ack?: (res: unknown) => void) => {
     const gameId = payload?.gameId;
     if (!gameId || !isValidGameId(gameId)) {
       ack?.({ ok: false, error: "알 수 없는 게임입니다." });
       return;
     }
-    const { room, seat } = createRoom(gameId, socket.id);
+    const { room, seat } = createRoom(gameId, socket.id, payload?.setupId);
     socket.join(room.code);
     ack?.({ ok: true, you: seat.playerIndex, seatToken: seat.seatToken, ...roomSummary(room) });
   });

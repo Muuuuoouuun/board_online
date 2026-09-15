@@ -20,6 +20,8 @@ interface Seat {
 export interface Room {
   code: string;
   gameId: GameId;
+  /** pre-game setup choice (e.g. janggi formation); reused on rematch */
+  setupId?: string;
   state: unknown;
   seats: Seat[];
   createdAt: number;
@@ -31,7 +33,7 @@ const socketToRoom = new Map<string, string>();
 
 export { isGameId as isValidGameId } from "@board-online/shared";
 
-export function createRoom(gameId: GameId, socketId: string) {
+export function createRoom(gameId: GameId, socketId: string, setupId?: string) {
   let code = generateCode();
   while (rooms.has(code)) code = generateCode();
 
@@ -40,7 +42,8 @@ export function createRoom(gameId: GameId, socketId: string) {
   const room: Room = {
     code,
     gameId,
-    state: engine.createInitialState(),
+    setupId,
+    state: engine.createInitialState(setupId),
     seats: [seat],
     createdAt: Date.now(),
     lastActivityAt: Date.now(),
@@ -127,7 +130,7 @@ export function disconnectSocket(socketId: string): { room: Room; seat: Seat } |
 
 export function resetRoom(room: Room) {
   const engine = getEngine(room.gameId);
-  room.state = engine.createInitialState();
+  room.state = engine.createInitialState(room.setupId);
   room.lastActivityAt = Date.now();
 }
 

@@ -10,6 +10,7 @@ interface RulesModalProps {
 
 export default function RulesModal({ open, onClose, gameId }: RulesModalProps) {
   const rule = RULES[gameId];
+  if (!rule) return null;
   return (
     <Modal open={open} onClose={onClose}>
       <h2 className="rules-title">{rule.title} 규칙</h2>
