@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import Modal from "./Modal.js";
+import { playSound } from "../lib/sound.js";
 
 export type ResultKind = "win" | "lose" | "draw";
 
@@ -18,6 +20,13 @@ const ICON: Record<ResultKind, string> = {
 };
 
 export default function ResultModal({ open, kind, title, subtitle, onRematch, onClose }: ResultModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    // let the closing move's own sound land first
+    const timer = setTimeout(() => playSound(kind), 260);
+    return () => clearTimeout(timer);
+  }, [open, kind]);
+
   return (
     <Modal open={open} onClose={onClose} panelClassName={`result-panel result-${kind}`}>
       <div className="result-icon">{ICON[kind]}</div>

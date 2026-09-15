@@ -1,0 +1,387 @@
+/* Lobby (Home) page styles — scoped entirely under .home-* so nothing here
+   can leak into the game pages that share index.css. */
+
+.home-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  width: 100%;
+}
+
+/* --- Hero --- */
+
+.home-hero {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  padding-top: 6px;
+}
+
+.home-hero::before {
+  content: "";
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  width: 360px;
+  height: 200px;
+  max-width: 100vw;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(223, 181, 121, 0.35) 0%, rgba(223, 181, 121, 0) 72%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.home-hero-eyebrow {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4ead2 100%);
+  border: 1px solid #e3d3ab;
+  color: #8a6a45;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(138, 106, 69, 0.15);
+}
+
+.home-hero-title {
+  margin: 8px 0 0;
+  font-size: clamp(2.1rem, 7vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #241d15;
+  position: relative;
+  display: inline-block;
+}
+
+.home-hero-title::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin: 10px auto 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #dfb579, #b58863);
+}
+
+.home-hero-sub {
+  margin: 0;
+  color: #52606d;
+  font-size: 1.05rem;
+}
+
+.home-feature-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.home-feature-list li {
+  background: #ffffff;
+  border: 1px solid #e5ddc8;
+  color: #5c4a30;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* --- Join by code --- */
+
+.home-join {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border: 1px solid #e7ddc4;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 16px rgba(90, 66, 32, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-join-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #8a6a45;
+}
+
+.home-join-row {
+  display: flex;
+  gap: 10px;
+}
+
+.home-join-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 2px solid #e3d3ab;
+  border-radius: 10px;
+  background: #fbf8f0;
+  color: #1f2933;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.home-join-input::placeholder {
+  color: #b7ac95;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.home-join-input:focus {
+  outline: none;
+  border-color: #2f6bff;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+  background: #ffffff;
+}
+
+.home-join-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  padding: 0 20px;
+  background: #2f6bff;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 6px rgba(47, 107, 255, 0.3);
+}
+
+.home-join-btn:hover {
+  background: #1f52d1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
+}
+
+.home-join-btn:active {
+  transform: translateY(0);
+}
+
+.home-error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* --- Game grid --- */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  width: 100%;
+}
+
+@keyframes home-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fdfbf5 100%);
+  border: 1px solid #ece3cd;
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(90, 66, 32, 0.07);
+  opacity: 0;
+  animation: home-card-in 0.5s ease-out forwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.home-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px rgba(90, 66, 32, 0.16);
+  border-color: #dfb579;
+}
+
+.home-card:hover .home-motif-svg {
+  transform: scale(1.06);
+}
+
+.home-card:focus-within {
+  border-color: #2f6bff;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.14);
+}
+
+.home-card-motif {
+  align-self: flex-start;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f6efdd, #ead9b3);
+  border: 1px solid #e3d3ab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 1px 3px rgba(90, 66, 32, 0.12);
+}
+
+.home-motif-svg {
+  width: 44px;
+  height: 44px;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.home-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1f2933;
+}
+
+.home-card-players {
+  color: #8a6a45;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.home-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.home-card-primary {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  background: #2f6bff;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(47, 107, 255, 0.3);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-card-primary:hover:not(:disabled) {
+  background: #1f52d1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
+}
+
+.home-card-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.home-card-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.home-card-secondary {
+  text-align: center;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1.5px solid #dfd3b8;
+  color: #6b5638;
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.home-card-secondary:hover {
+  background: #f6efdd;
+  border-color: #b58863;
+  color: #4a3a24;
+}
+
+/* --- Footer --- */
+
+.home-footer {
+  color: #9aa5b1;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.home-footer p {
+  margin: 0;
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 480px) {
+  .home-page {
+    padding: 24px 16px 40px;
+    gap: 24px;
+  }
+
+  .home-join {
+    padding: 16px;
+  }
+
+  .home-card {
+    padding: 16px;
+  }
+}
+
+/* --- Motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-card {
+    animation: none;
+    opacity: 1;
+  }
+
+  .home-card,
+  .home-card-primary,
+  .home-join-btn,
+  .home-motif-svg {
+    transition: none;
+  }
+
+  .home-card:hover,
+  .home-card-primary:hover:not(:disabled),
+  .home-join-btn:hover {
+    transform: none;
+  }
+}

@@ -4,6 +4,7 @@ import { getEngine, isGameId, type GameId, type Move } from "@board-online/share
 import Board from "../components/Board.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
+import SoundToggle from "../components/SoundToggle.js";
 
 export default function Local() {
   const params = useParams<{ gameId: string }>();
@@ -64,6 +65,7 @@ function LocalGame({ gameId }: { gameId: GameId }) {
         <button className="secondary-btn" onClick={() => setShowRules(true)}>
           규칙 보기
         </button>
+        <SoundToggle />
         {status.status !== "ongoing" && resultDismissed && (
           <button className="rematch-btn" onClick={handleReset}>
             처음부터 다시

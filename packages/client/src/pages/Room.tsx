@@ -6,6 +6,7 @@ import { getSeatToken, setSeatToken } from "../lib/storage.js";
 import Board from "../components/Board.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
+import SoundToggle from "../components/SoundToggle.js";
 
 interface RoomData {
   gameId: GameId;
@@ -138,6 +139,7 @@ export default function Room() {
         <button className="secondary-btn" onClick={() => setShowRules(true)}>
           규칙 보기
         </button>
+        <SoundToggle />
         {status.status !== "ongoing" && resultDismissed && (
           <button className="rematch-btn" onClick={handleRematch}>
             다시 하기

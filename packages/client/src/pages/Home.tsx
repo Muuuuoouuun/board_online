@@ -1,8 +1,108 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GAME_LIST, getEngine } from "@board-online/shared";
+import { GAME_LIST, getEngine, type GameId } from "@board-online/shared";
 import { emitAck } from "../lib/socket.js";
 import { setSeatToken } from "../lib/storage.js";
+import "../styles/home.css";
+
+/** Shared 4x4 checkerboard cells reused by the chess/checkers motifs. */
+const CHECKERBOARD_CELLS: { x: number; y: number; dark: boolean }[] = (() => {
+  const cells: { x: number; y: number; dark: boolean }[] = [];
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      cells.push({ x: 6 + c * 13, y: 6 + r * 13, dark: (r + c) % 2 === 0 });
+    }
+  }
+  return cells;
+})();
+
+function CheckerboardCells({ darkFill, lightFill }: { darkFill: string; lightFill: string }) {
+  return (
+    <>
+      {CHECKERBOARD_CELLS.map((cell, i) => (
+        <rect key={i} x={cell.x} y={cell.y} width={13} height={13} fill={cell.dark ? darkFill : lightFill} />
+      ))}
+    </>
+  );
+}
+
+/** Small decorative, hand-drawn inline-SVG motif hinting at each game's board/pieces. */
+function GameMotif({ id }: { id: GameId }) {
+  return (
+    <svg className="home-motif-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      {id === "gomoku" && (
+        <>
+          <g stroke="#b58863" strokeWidth="1.3" opacity="0.55">
+            <line x1="14" y1="10" x2="14" y2="54" />
+            <line x1="26" y1="10" x2="26" y2="54" />
+            <line x1="38" y1="10" x2="38" y2="54" />
+            <line x1="50" y1="10" x2="50" y2="54" />
+            <line x1="10" y1="14" x2="54" y2="14" />
+            <line x1="10" y1="26" x2="54" y2="26" />
+            <line x1="10" y1="38" x2="54" y2="38" />
+            <line x1="10" y1="50" x2="54" y2="50" />
+          </g>
+          <circle cx="26" cy="26" r="7.5" fill="#2b2620" />
+          <circle cx="38" cy="38" r="7.5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.3" />
+        </>
+      )}
+
+      {id === "chess" && (
+        <>
+          <CheckerboardCells darkFill="#b58863" lightFill="#efe2c6" />
+          <g fill="#2f6bff">
+            <path d="M21 43 L32 25 L43 43 Z" />
+            <circle cx="32" cy="19" r="3.6" />
+            <rect x="30.4" y="11" width="3.2" height="6.5" />
+            <rect x="27" y="13.2" width="10" height="3" />
+          </g>
+        </>
+      )}
+
+      {id === "janggi" && (
+        <>
+          <g stroke="#8a6a45" strokeWidth="1.6" fill="none">
+            <rect x="13" y="13" width="38" height="38" />
+            <line x1="13" y1="13" x2="51" y2="51" />
+            <line x1="51" y1="13" x2="13" y2="51" />
+          </g>
+          <polygon
+            points="32,19 41,24 41,40 32,45 23,40 23,24"
+            fill="#dfb579"
+            stroke="#8a6a45"
+            strokeWidth="1.4"
+          />
+          <line x1="26" y1="32" x2="38" y2="32" stroke="#5c3d21" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+
+      {id === "checkers" && (
+        <>
+          <CheckerboardCells darkFill="#b58863" lightFill="#efe2c6" />
+          <circle cx="32" cy="37" r="9" fill="#b58863" stroke="#5c3d21" strokeWidth="1.2" />
+          <circle cx="32" cy="27" r="9" fill="#efe2c6" stroke="#8a6a45" strokeWidth="1.2" />
+        </>
+      )}
+
+      {id === "reversi" && (
+        <>
+          <g stroke="#c9b48c" strokeWidth="1.2">
+            <line x1="8" y1="20" x2="56" y2="20" />
+            <line x1="8" y1="32" x2="56" y2="32" />
+            <line x1="8" y1="44" x2="56" y2="44" />
+            <line x1="20" y1="8" x2="20" y2="56" />
+            <line x1="32" y1="8" x2="32" y2="56" />
+            <line x1="44" y1="8" x2="44" y2="56" />
+          </g>
+          <circle cx="26" cy="26" r="6.4" fill="#2b2620" />
+          <circle cx="38" cy="26" r="6.4" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1" />
+          <circle cx="26" cy="38" r="6.4" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1" />
+          <circle cx="38" cy="38" r="6.4" fill="#2b2620" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -31,41 +131,71 @@ export default function Home() {
   }
 
   return (
-    <div className="page">
-      <header className="hero">
-        <h1>보드온라인</h1>
-        <p>로그인 없이, 방 코드 하나로 친구와 바로 한 판.</p>
+    <div className="home-page">
+      <header className="home-hero">
+        <span className="home-hero-eyebrow">설치도, 로그인도 필요 없어요</span>
+        <h1 className="home-hero-title">보드온라인</h1>
+        <p className="home-hero-sub">로그인 없이, 방 코드 하나로 친구와 바로 한 판.</p>
+        <ul className="home-feature-list">
+          <li>계정 없이 바로 시작</li>
+          <li>방 코드로 친구 초대</li>
+          <li>오목 · 체스 · 장기 · 체커 · 리버시</li>
+        </ul>
       </header>
 
-      <form className="join-form" onSubmit={handleJoin}>
-        <input
-          value={joinCode}
-          onChange={(e) => setJoinCode(e.target.value)}
-          placeholder="방 코드로 입장 (예: 4UEJT3)"
-          maxLength={8}
-        />
-        <button type="submit">입장하기</button>
-      </form>
+      <section className="home-join" aria-label="방 코드로 입장하기">
+        <form className="home-join-form" onSubmit={handleJoin}>
+          <label className="home-join-label" htmlFor="home-join-input">
+            이미 방 코드가 있으신가요?
+          </label>
+          <div className="home-join-row">
+            <input
+              id="home-join-input"
+              className="home-join-input"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="예: 4UEJT3"
+              maxLength={8}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button className="home-join-btn" type="submit">
+              입장하기
+            </button>
+          </div>
+        </form>
+        {error && (
+          <p className="home-error" role="alert">
+            {error}
+          </p>
+        )}
+      </section>
 
-      {error && <p className="error-text">{error}</p>}
-
-      <div className="game-grid">
-        {GAME_LIST.map((id) => {
+      <section className="home-grid" aria-label="게임 목록">
+        {GAME_LIST.map((id, i) => {
           const engine = getEngine(id);
+          const busy = busyGame === id;
           return (
-            <div className="game-card" key={id}>
-              <h2>{engine.meta.nameKo}</h2>
-              <p className="game-card-sub">{engine.meta.playerLabels.join(" vs ")}</p>
-              <div className="game-card-actions">
-                <button disabled={busyGame === id} onClick={() => handleCreate(id)}>
-                  {busyGame === id ? "만드는 중..." : "친구와 온라인으로"}
-                </button>
-                <Link to={`/local/${id}`}>같은 화면 2인 플레이</Link>
+            <article className="home-card" key={id} style={{ animationDelay: `${i * 70}ms` }}>
+              <div className="home-card-motif">
+                <GameMotif id={id} />
               </div>
-            </div>
+              <div className="home-card-body">
+                <h2 className="home-card-title">{engine.meta.nameKo}</h2>
+                <span className="home-card-players">{engine.meta.playerLabels.join(" vs ")}</span>
+              </div>
+              <div className="home-card-actions">
+                <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
+                  {busy ? "방 만드는 중..." : "친구와 온라인으로"}
+                </button>
+                <Link className="home-card-secondary" to={`/local/${id}`}>
+                  같은 화면 2인 플레이
+                </Link>
+              </div>
+            </article>
           );
         })}
-      </div>
+      </section>
 
       <footer className="home-footer">
         <p>초기 MVP · 계정 없이 브라우저에서 바로 플레이합니다.</p>

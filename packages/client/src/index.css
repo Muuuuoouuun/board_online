@@ -183,8 +183,178 @@ button:hover:not(:disabled) {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 8px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(60, 40, 20, 0.28), 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* --- Board interaction affordances --- */
+
+.board-hit {
+  fill: transparent;
+  transition: fill 120ms ease;
+}
+
+.board-hit--legal:hover {
+  fill: rgba(47, 107, 255, 0.2);
+}
+
+.board-hit--selectable:hover {
+  fill: rgba(47, 107, 255, 0.13);
+}
+
+.board-dest {
+  fill: rgba(22, 24, 28, 0.4);
+  pointer-events: none;
+  animation: bo-fade-in 160ms ease-out;
+}
+
+.board-dest--capture {
+  fill: none;
+  stroke: #e5484d;
+  stroke-width: 3;
+}
+
+.board-selectable {
+  fill: none;
+  stroke: #2f6bff;
+  stroke-opacity: 0.32;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.board-selected {
+  fill: none;
+  stroke: #2f6bff;
+  stroke-width: 3;
+  pointer-events: none;
+  animation: bo-selected-pulse 1.3s ease-in-out infinite;
+}
+
+.board-lastmove {
+  fill: none;
+  stroke: #f2b632;
+  stroke-width: 2;
+  stroke-opacity: 0.5;
+  pointer-events: none;
+}
+
+.board-lastmove--to {
+  stroke-width: 2.8;
+  stroke-opacity: 0.85;
+  animation: bo-lastmove-pulse 1.5s ease-out 2;
+}
+
+@keyframes bo-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bo-selected-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.4;
+  }
+}
+
+@keyframes bo-lastmove-pulse {
+  0%,
+  100% {
+    stroke-opacity: 0.85;
+  }
+  50% {
+    stroke-opacity: 0.25;
+  }
+}
+
+/* --- Piece motion --- */
+
+.board-piece {
+  transform-origin: 0 0;
+}
+
+@keyframes bo-piece-slide {
+  from {
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+.board-piece--slide {
+  animation: bo-piece-slide 240ms cubic-bezier(0.32, 0.08, 0.24, 1);
+}
+
+@keyframes bo-piece-enter {
+  0% {
+    transform: scale(0.25);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.board-piece--enter {
+  animation: bo-piece-enter 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bo-piece-flip {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.08);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.board-piece--flip {
+  animation: bo-piece-flip 320ms ease-in-out;
+}
+
+@keyframes bo-piece-leave {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+}
+
+.board-piece--leave {
+  animation: bo-piece-leave 260ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-piece--slide,
+  .board-piece--enter,
+  .board-piece--flip,
+  .board-piece--leave,
+  .board-lastmove--to,
+  .board-selected,
+  .board-dest,
+  .modal-backdrop,
+  .modal-panel,
+  .result-icon {
+    animation: none !important;
+  }
 }
 
 .rematch-btn {
