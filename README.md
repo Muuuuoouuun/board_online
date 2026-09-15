@@ -17,6 +17,7 @@
 | [docs/05-guidelines.md](docs/05-guidelines.md) | 개발 지침, 게임 완료 기준(DoD), 코드 규약, 브랜치/CI, i18n, 보안 |
 | [docs/06-ip-policy.md](docs/06-ip-policy.md) | 저작권·상표 정책, 게임별 체크리스트, 서드파티 라이선스 |
 | [docs/07-roadmap.md](docs/07-roadmap.md) | 단계별 로드맵, 마일스톤, 리스크 |
+| [docs/08-asset-pipeline.md](docs/08-asset-pipeline.md) | 디자인 자산 파이프라인: 생성형 AI 모델·도구 선택, 질감·기물·애니메이션·사운드 제작과 단계별 디벨롭 |
 | [docs/adr/](docs/adr/) | 아키텍처 결정 기록 (왜 이 스택인지) |
 
 ## 한눈에 보는 핵심 결정
