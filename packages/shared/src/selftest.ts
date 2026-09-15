@@ -5,7 +5,10 @@ import { chessEngine } from "./games/chess.js";
 import { janggiEngine } from "./games/janggi.js";
 import { flickEngine } from "./games/flick.js";
 import { gonuEngine } from "./games/gonu.js";
+import { yutEngine } from "./games/yut.js";
+import { territoryEngine } from "./games/territory.js";
 import type { GameEngine, Move } from "./types.js";
+import { applyMoveSafely } from "./index.js";
 
 let failures = 0;
 let checks = 0;
@@ -149,6 +152,47 @@ function ok(msg: string) {
   ok("janggi hanja glyphs verified (楚/漢 generals, 卒/兵 soldiers)");
 }
 
+// --- Every engine must reject malformed moves instead of throwing ---
+// Moves reach applyMove straight from a network client, so a throw here would
+// take the server process down with every other room on it.
+{
+  const engines: GameEngine<any, any>[] = [
+    gomokuEngine, reversiEngine, checkersEngine, chessEngine, janggiEngine, gonuEngine, yutEngine, territoryEngine, flickEngine,
+  ];
+  const junk: unknown[] = [
+    null,
+    undefined,
+    {},
+    { to: null },
+    { to: {} },
+    { to: { x: "a", y: "b" } },
+    { to: { x: NaN, y: NaN } },
+    { to: { x: 1e9, y: -1e9 } },
+    { from: {}, to: {} },
+    { kind: "nonsense" },
+    [],
+    "move",
+    42,
+  ];
+  for (const engine of engines) {
+    const state = engine.createInitialState();
+    const player = engine.turn(state);
+    for (const bad of junk) {
+      let threw = false;
+      let res: any;
+      try {
+        res = applyMoveSafely(engine, state, bad as any, player);
+      } catch {
+        threw = true;
+      }
+      assert(!threw, `${engine.meta.id}: applyMoveSafely must not throw on ${JSON.stringify(bad) ?? String(bad)}`);
+      assert(threw || res.ok === false, `${engine.meta.id}: applyMoveSafely must reject ${JSON.stringify(bad) ?? String(bad)}`);
+      assert(threw || res.state === state, `${engine.meta.id}: a rejected move must leave state untouched`);
+    }
+  }
+  ok(`malformed-move handling verified across ${engines.length} engines`);
+}
+
 // --- Generic smoke test: play random legal moves for a while on every engine, no crash ---
 function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number) {
   let state = engine.createInitialState();
@@ -188,6 +232,8 @@ randomPlaythrough(chessEngine, 150);
 randomPlaythrough(janggiEngine, 150);
 randomPlaythrough(flickEngine, 200);
 randomPlaythrough(gonuEngine, 80);
+randomPlaythrough(yutEngine, 400);
+randomPlaythrough(territoryEngine, 600);
 
 console.log(`\n${checks - failures}/${checks} checks passed`);
 if (failures > 0) {

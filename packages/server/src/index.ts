@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { getEngine, type Move } from "@board-online/shared";
+import { applyMoveSafely, getEngine, type Move } from "@board-online/shared";
 import {
   createRoom,
   disconnectSocket,
@@ -84,7 +84,8 @@ io.on("connection", (socket) => {
       return;
     }
     const engine = getEngine(found.room.gameId);
-    const result = engine.applyMove(found.room.state, move, found.seat.playerIndex);
+    // Moves are attacker-controlled, so they go through the shared guard.
+    const result = applyMoveSafely(engine, found.room.state, move, found.seat.playerIndex);
     if (!result.ok) {
       ack?.({ ok: false, error: result.error });
       return;

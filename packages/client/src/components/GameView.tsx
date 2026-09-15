@@ -2,6 +2,8 @@ import type { BoardPiece, GameEngine, PlayerIndex } from "@board-online/shared";
 import Board from "./Board.js";
 import FlickBoard from "./boards/FlickBoard.js";
 import GonuBoard from "./boards/GonuBoard.js";
+import YutBoard from "./boards/YutBoard.js";
+import TerritoryBoard from "./boards/TerritoryBoard.js";
 
 interface GameViewProps {
   engine: GameEngine<any, any>;
@@ -25,6 +27,10 @@ export default function GameView({ engine, state, pieces, legalMoves, onMove, in
       return <FlickBoard {...custom} />;
     case "gonu":
       return <GonuBoard {...custom} />;
+    case "yut":
+      return <YutBoard {...custom} />;
+    case "territory":
+      return <TerritoryBoard {...custom} />;
     default:
       return (
         <Board meta={engine.meta} pieces={pieces} legalMoves={legalMoves} onMove={onMove} interactive={interactive} />

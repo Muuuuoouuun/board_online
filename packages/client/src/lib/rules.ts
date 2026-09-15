@@ -1,6 +1,8 @@
 import type { GameId } from "@board-online/shared";
 import { flickRules } from "./rules.flick.js";
 import { gonuRules } from "./rules.gonu.js";
+import { yutRules } from "./rules.yut.js";
+import { territoryRules } from "./rules.territory.js";
 
 interface GameRules {
   title: string;
@@ -58,5 +60,7 @@ export const RULES: Partial<Record<GameId, GameRules>> = {
     ],
   },
   gonu: gonuRules,
+  yut: yutRules,
+  territory: territoryRules,
   flick: flickRules,
 };
