@@ -1,0 +1,212 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f3ee;
+  color: #1f2933;
+}
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.hero h1 {
+  font-size: 2.2rem;
+  margin: 0 0 8px;
+}
+
+.hero p {
+  color: #52606d;
+  margin: 0;
+}
+
+.join-form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.join-form input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: #2f6bff;
+  color: white;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background: #1f52d1;
+}
+
+.error-text {
+  color: #c0362c;
+  font-weight: 600;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.game-card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-card h2 {
+  margin: 0;
+}
+
+.game-card-sub {
+  color: #7b8794;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.game-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.game-card-actions a {
+  text-align: center;
+  color: #2f6bff;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.game-card-actions a:hover {
+  text-decoration: underline;
+}
+
+.home-footer {
+  color: #9aa5b1;
+  font-size: 0.85rem;
+  margin-top: 16px;
+}
+
+.room-page {
+  width: 100%;
+}
+
+.room-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.room-header h1 {
+  margin: 0;
+}
+
+.room-code-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.room-code-box strong {
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+}
+
+.you-label {
+  margin: 0;
+  color: #52606d;
+}
+
+.status-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.board-wrap {
+  width: 100%;
+  max-width: 560px;
+}
+
+.board-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+}
+
+.rematch-btn {
+  background: #1f9d55;
+}
+
+.rematch-btn:hover {
+  background: #17793f;
+}
+
+.leave-link {
+  color: #7b8794;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.leave-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .hero h1 {
+    font-size: 1.7rem;
+  }
+}
