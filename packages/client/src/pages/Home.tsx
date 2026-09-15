@@ -205,7 +205,8 @@ export default function Home() {
         <ul className="home-feature-list">
           <li>계정 없이 바로 시작</li>
           <li>방 코드로 친구 초대</li>
-          <li>오목 · 체스 · 장기 · 체커 · 리버시</li>
+          {/* Counted from the registry so adding a game can't leave this stale. */}
+          <li>고전·전통 보드게임 {GAME_LIST.length}종</li>
         </ul>
       </header>
 
