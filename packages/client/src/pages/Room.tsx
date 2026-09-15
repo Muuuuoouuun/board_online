@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { getEngine, type GameId, type Move, type PlayerIndex } from "@board-online/shared";
 import { emitAck, socket } from "../lib/socket.js";
 import { getSeatToken, setSeatToken } from "../lib/storage.js";
-import Board from "../components/Board.js";
+import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
@@ -154,12 +154,14 @@ export default function Room() {
       {moveError && <p className="error-text">{moveError}</p>}
 
       <div className="board-wrap">
-        <Board
-          meta={engine.meta}
+        <GameView
+          engine={engine}
+          state={roomData.state}
           pieces={pieces}
           legalMoves={legalMoves}
           onMove={handleMove}
           interactive={myTurn && !!opponent?.connected}
+          you={you}
         />
       </div>
 

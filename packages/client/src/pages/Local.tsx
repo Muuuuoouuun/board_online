@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getEngine, isGameId, type GameId, type Move } from "@board-online/shared";
-import Board from "../components/Board.js";
+import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
@@ -96,12 +96,14 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
       {status.status === "ongoing" && <p className="status-text">{engine.meta.playerLabels[turn]} 차례</p>}
 
       <div className="board-wrap">
-        <Board
-          meta={engine.meta}
+        <GameView
+          engine={engine}
+          state={state}
           pieces={pieces}
           legalMoves={legalMoves}
           onMove={handleMove}
           interactive={status.status === "ongoing"}
+          you={null}
         />
       </div>
 
