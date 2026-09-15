@@ -412,3 +412,33 @@
   outline: 2px solid #2f6bff;
   outline-offset: 1px;
 }
+
+/* --- Computer opponent row on each card --- */
+
+.home-card-ai {
+  display: flex;
+  gap: 6px;
+}
+
+.home-card-ai-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-card-ai-level {
+  flex: 0 0 auto;
+  border: 1.5px solid #dfd3b8;
+  border-radius: 10px;
+  background: #fffdf8;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6b5638;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.home-card-ai-level:focus-visible {
+  outline: 2px solid #2f6bff;
+  outline-offset: 1px;
+}

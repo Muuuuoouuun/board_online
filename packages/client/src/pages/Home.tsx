@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GAME_LIST, getEngine, type GameId } from "@board-online/shared";
+import { AI_LEVELS, GAME_LIST, getEngine, type AiLevel, type GameId } from "@board-online/shared";
 import { emitAck } from "../lib/socket.js";
 import { setSeatToken } from "../lib/storage.js";
 import "../styles/home.css";
@@ -169,12 +169,19 @@ function GameMotif({ id }: { id: GameId }) {
   );
 }
 
+function aiPath(id: GameId, level: AiLevel, setup?: string): string {
+  const q = new URLSearchParams({ level });
+  if (setup) q.set("setup", setup);
+  return `/ai/${id}?${q.toString()}`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [busyGame, setBusyGame] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [setupChoice, setSetupChoice] = useState<Record<string, string>>({});
+  const [aiLevel, setAiLevel] = useState<AiLevel>("normal");
 
   async function handleCreate(gameId: string) {
     setBusyGame(gameId);
@@ -207,6 +214,7 @@ export default function Home() {
           <li>방 코드로 친구 초대</li>
           {/* Counted from the registry so adding a game can't leave this stale. */}
           <li>고전·전통 보드게임 {GAME_LIST.length}종</li>
+          <li>혼자서도 컴퓨터와 대전</li>
         </ul>
       </header>
 
@@ -270,6 +278,23 @@ export default function Home() {
                 <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
                   {busy ? "방 만드는 중..." : "친구와 온라인으로"}
                 </button>
+                <div className="home-card-ai">
+                  <Link className="home-card-secondary home-card-ai-link" to={aiPath(id, aiLevel, setupChoice[id])}>
+                    컴퓨터와 대전
+                  </Link>
+                  <select
+                    className="home-card-ai-level"
+                    value={aiLevel}
+                    onChange={(e) => setAiLevel(e.target.value as AiLevel)}
+                    aria-label={`${engine.meta.nameKo} 컴퓨터 난이도`}
+                  >
+                    {AI_LEVELS.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <Link
                   className="home-card-secondary"
                   to={setupChoice[id] ? `/local/${id}?setup=${encodeURIComponent(setupChoice[id])}` : `/local/${id}`}

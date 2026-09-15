@@ -1,6 +1,7 @@
 # 보드온라인 (Board Online) — 초기 MVP
 
 로그인 없이 방 코드 하나로 친구와 바로 즐기는 무료 온라인 보드게임 플랫폼입니다.
+혼자라면 게임마다 준비된 **컴퓨터 상대**(쉬움·보통·어려움)와 둘 수 있습니다.
 
 ## 포함된 게임
 
@@ -35,6 +36,7 @@ packages/
 - **shared**: 게임마다 `createInitialState / legalMoves / applyMove / status / pieces`
   를 구현하는 `GameEngine` 인터페이스 하나로 통일했습니다. 서버는 이걸로 수를 검증하고,
   클라이언트도 같은 엔진을 그대로 import해서 합법수 하이라이트를 계산합니다(로직 중복 없음).
+  컴퓨터 상대(`src/ai/`)도 같은 엔진 위에서 돌아갑니다 — 아래 "컴퓨터 상대" 참고.
 - **server**: 계정/DB 없이 방 코드(6자리)로만 동작하는 실시간 대전 서버입니다. 방 상태는
   전부 메모리에 있고, 아무도 접속하지 않은 방은 주기적으로 정리됩니다. 새로고침해도
   `localStorage`에 저장된 좌석 토큰으로 같은 자리를 되찾습니다.
@@ -54,11 +56,39 @@ npm run dev:client   # http://localhost:5173 (Vite dev server)
 `http://localhost:5173`을 열어 한쪽에서 방을 만들고 다른 쪽에서 방 코드로 입장하면
 바로 대국할 수 있습니다.
 
-엔진 자체 테스트(합법수 개수, 룰 검증 등):
+엔진 자체 테스트(합법수 개수, 룰 검증 등)와 컴퓨터 상대 테스트(합법성·시간 예산·무작위 상대 승률):
 
 ```bash
 npm run test:engine
+npm run test:ai        # AI_GAME=gomoku 처럼 게임 하나만 돌릴 수도 있습니다
+npm run typecheck      # shared / server / client 전부
 ```
+
+## 컴퓨터 상대
+
+홈 화면의 각 게임 카드에서 **컴퓨터와 대전**을 누르면 `/ai/<game>` 페이지에서 바로 시작합니다.
+서버가 필요 없어서 정적 호스팅만으로도 동작하고, 탐색은 Web Worker에서 돌아 보드가 멈추지 않습니다.
+
+| 난이도 | 동작 |
+| --- | --- |
+| 쉬움 | 절반쯤은 아무 수나 두지만, 바로 이기는 수와 바로 지는 수는 놓치지 않습니다 |
+| 보통 | 몇 수 앞을 읽습니다 (기본 0.5초 예산) |
+| 어려움 | 주어진 시간(약 1.4초) 안에서 반복 심화로 최대한 깊이 읽습니다 |
+
+구조는 `packages/shared/src/ai/`에 있습니다.
+
+- `types.ts` — `AiProvider.chooseMove(state, player, level, { rng, budgetMs, now })` 계약.
+  절대 예외를 던지지 않고, 자기 차례가 아니거나 게임이 끝났으면 `null`을 돌려줍니다.
+- `search.ts` — 어떤 `GameEngine`에도 붙일 수 있는 반복 심화 알파베타. 평가 함수와
+  (선택) 후보수 생성기만 넘기면 세 난이도가 만들어집니다. 한 쪽이 연속으로 두는 게임
+  (체커 연속 점프, 땅따먹기 경로)도 맞게 처리하도록 "루트 플레이어 관점"으로 썼습니다.
+- `<game>.ts` — 게임별 평가 함수·후보수 가지치기. 윷놀이(확률)·땅따먹기 두 종(경로 계획)은
+  미니맥스 대신 전용 휴리스틱을 씁니다.
+- `selftest-ai.ts` — 게임마다 합법성, 시간 예산, 시드 결정성, 무작위 상대 승률을 검사합니다.
+
+새 게임에 AI를 붙이려면 `ai/<game>.ts`에 `AiProvider`를 만들고 `ai/index.ts`의 `AI_PROVIDERS`에
+등록하면 됩니다. 평가 함수가 아직 없으면 `makeRandomAi(engine)`로 자리를 채워도 테스트는 통과합니다
+(승률 검사만 실패하므로 `AI_SKIP_STRENGTH=1`로 잠시 건너뛸 수 있습니다).
 
 ## 배포 (무료 호스팅 기준)
 
@@ -85,6 +115,19 @@ docker run -p 3001:3001 board-online
 
 서버는 `PORT` 환경변수를 읽으므로 호스팅이 지정하는 포트를 그대로 따릅니다.
 
+### 클라이언트와 서버를 따로 올리기 (Vercel + Render 등)
+
+정적 호스팅(Vercel 등)에 클라이언트만 올리면 **같은 화면 2인 플레이와 컴퓨터 대전은 그대로 동작**하지만,
+온라인 대전은 Socket.IO 서버가 있어야 합니다. 서버를 따로 올렸다면 클라이언트 빌드 시
+`VITE_SERVER_URL`에 그 주소를 넣으세요 (`packages/client/.env.example` 참고).
+
+```bash
+VITE_SERVER_URL=https://board-online.onrender.com npm run build
+```
+
+값이 없으면 클라이언트는 자기 origin에 연결을 시도하고, 8초 안에 응답이 없으면
+"온라인 서버에 연결할 수 없습니다"라고 알려줍니다 (무한 대기하지 않습니다).
+
 ### 배포 전에 알아둘 제약
 
 - **상시 구동이 필요합니다.** Socket.IO는 연결을 계속 열어두므로 서버리스/엣지 타깃에는
@@ -99,7 +142,7 @@ docker run -p 3001:3001 board-online
 
 - 로그인/계정, 전적, 레이팅, 랭킹
 - 관전, 채팅, 친구 목록
-- AI(컴퓨터) 상대
+- 온라인 방에서 컴퓨터를 상대로 두기 (컴퓨터 대전은 로컬에서만)
 - 마작
 - 체스 무승부 제안/기권, 기보 저장
 
@@ -116,6 +159,8 @@ docker run -p 3001:3001 board-online
    `packages/client/src/components/boards/`에 `GameViewProps`를 받는 렌더러를 만든 뒤
    `GameView.tsx`의 분기에 추가하세요 (윷놀이·땅따먹기가 이 방식입니다).
 5. 규칙 텍스트는 `packages/client/src/lib/rules.*.ts`에 두고 `rules.ts`에서 합칩니다.
+6. 컴퓨터 상대는 `packages/shared/src/ai/<game>.ts`에 `AiProvider`를 만들어 `ai/index.ts`에
+   등록합니다 (위 "컴퓨터 상대" 참고). `npm run test:ai`가 통과해야 합니다.
 
 엔진을 쓸 때 지켜야 할 것:
 

@@ -30,6 +30,8 @@ export default function Room() {
     const token = getSeatToken(code);
     const res = await emitAck<any>("room:join", { code, seatToken: token });
     if (!res.ok) {
+      // A missing server is not a permanent error: keep the retry-on-connect
+      // handler alive by leaving roomData alone, but tell the player why nothing happens.
       setError(res.error ?? "방에 입장할 수 없습니다.");
       return;
     }

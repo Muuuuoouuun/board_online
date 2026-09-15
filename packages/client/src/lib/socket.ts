@@ -1,14 +1,40 @@
 import { io, type Socket } from "socket.io-client";
 
-const SERVER_URL = import.meta.env.DEV ? "http://localhost:3001" : window.location.origin;
+/**
+ * Where the realtime server lives. In development it is the local tsx server;
+ * in production it defaults to the page's own origin (the Docker image serves
+ * client + server together). Set VITE_SERVER_URL at build time when the client
+ * is hosted separately from the server (e.g. static client on Vercel, Socket.IO
+ * server on Render).
+ */
+const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, "") ||
+  (import.meta.env.DEV ? "http://localhost:3001" : window.location.origin);
 
 export const socket: Socket = io(SERVER_URL, {
   autoConnect: true,
   transports: ["websocket", "polling"],
 });
 
-export function emitAck<TRes = any>(event: string, payload: unknown): Promise<TRes> {
+export const CONNECT_ERROR = "온라인 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요. (같은 화면 2인 플레이와 컴퓨터 대전은 서버 없이도 됩니다)";
+
+/**
+ * Emits and waits for the server's ack. Rejecting never made sense for the UI,
+ * so a missing server resolves to a normal `{ ok: false }` reply after
+ * `timeoutMs` instead of hanging forever.
+ */
+export function emitAck<TRes = any>(event: string, payload: unknown, timeoutMs = 8000): Promise<TRes> {
   return new Promise((resolve) => {
-    socket.emit(event, payload, resolve);
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve({ ok: false, error: CONNECT_ERROR, offline: true } as unknown as TRes);
+    }, timeoutMs);
+    socket.emit(event, payload, (res: TRes) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(res);
+    });
   });
 }
