@@ -1,5 +1,6 @@
 import type { GameId } from "@board-online/shared";
 import { flickRules } from "./rules.flick.js";
+import { gonuRules } from "./rules.gonu.js";
 
 interface GameRules {
   title: string;
@@ -56,5 +57,6 @@ export const RULES: Partial<Record<GameId, GameRules>> = {
       "양쪽 모두 더 이상 둘 곳이 없으면 게임이 끝나고, 돌이 더 많은 쪽이 승리합니다. 같으면 무승부입니다.",
     ],
   },
+  gonu: gonuRules,
   flick: flickRules,
 };

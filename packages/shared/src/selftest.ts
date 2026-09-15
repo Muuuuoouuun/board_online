@@ -4,6 +4,7 @@ import { checkersEngine } from "./games/checkers.js";
 import { chessEngine } from "./games/chess.js";
 import { janggiEngine } from "./games/janggi.js";
 import { flickEngine } from "./games/flick.js";
+import { gonuEngine } from "./games/gonu.js";
 import type { GameEngine, Move } from "./types.js";
 
 let failures = 0;
@@ -186,6 +187,7 @@ randomPlaythrough(checkersEngine, 150);
 randomPlaythrough(chessEngine, 150);
 randomPlaythrough(janggiEngine, 150);
 randomPlaythrough(flickEngine, 200);
+randomPlaythrough(gonuEngine, 80);
 
 console.log(`\n${checks - failures}/${checks} checks passed`);
 if (failures > 0) {
