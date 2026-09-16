@@ -66,6 +66,9 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   const gameSerial = useRef(0);
   // How many actions the computer has taken in its current turn (0 = the turn just started).
   const aiSteps = useRef(0);
+  // Whether this game has been played at all — swapping sides or changing the
+  // opening formation starts a new one, which only matters once it would lose something.
+  const [started, setStarted] = useState(false);
 
   const computer: PlayerIndex = human === 0 ? 1 : 0;
   const status = engine.status(state);
@@ -115,6 +118,7 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
     gameSerial.current++;
     aiSteps.current = 0;
     setThinking(false);
+    setStarted(false);
     setHuman(nextHuman);
     setState(engine.createInitialState(nextSetup));
   }
@@ -122,7 +126,10 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   function handleMove(move: unknown) {
     if (!humanTurn) return;
     const result = engine.applyMove(state, move, human);
-    if (result.ok) setState(result.state);
+    if (result.ok) {
+      setStarted(true);
+      setState(result.state);
+    }
   }
 
   function handleSetupChange(next: string) {
@@ -143,7 +150,7 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
     resultTitle = "무승부";
   }
 
-  let statusText = "";
+  let statusText = resultTitle;
   if (status.status === "ongoing") {
     statusText = thinking || turn === computer ? "컴퓨터가 생각하는 중..." : "당신의 차례입니다";
   }
@@ -178,7 +185,12 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
           {setupOptions && (
             <label className="toolbar-setup">
               <span>배치</span>
-              <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
+              <select
+                value={setupId}
+                disabled={started}
+                title={started ? "판이 시작된 뒤에는 배치를 바꿀 수 없습니다" : undefined}
+                onChange={(e) => handleSetupChange(e.target.value)}
+              >
                 {setupOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -187,8 +199,8 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
               </select>
             </label>
           )}
-          <button className="secondary-btn" onClick={handleSwapSides} title="새 판을 상대 색으로 시작합니다">
-            선후 바꾸기
+          <button className="secondary-btn" onClick={handleSwapSides}>
+            색 바꿔 새 판
           </button>
         </div>
       </div>

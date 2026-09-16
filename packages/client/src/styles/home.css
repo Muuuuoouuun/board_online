@@ -32,7 +32,7 @@
   left: 50%;
   width: 360px;
   height: 200px;
-  max-width: 100vw;
+  max-width: 100%;
   transform: translateX(-50%);
   background: radial-gradient(ellipse at center, rgba(223, 181, 121, 0.35) 0%, rgba(223, 181, 121, 0) 72%);
   z-index: -1;
@@ -145,7 +145,7 @@
 }
 
 .home-join-input::placeholder {
-  color: #b7ac95;
+  color: var(--bo-ink-faint);
   letter-spacing: 0.08em;
   font-weight: 600;
 }
@@ -298,13 +298,17 @@
 }
 
 .home-card-primary:disabled {
-  opacity: 0.55;
+  opacity: 0.72;
   box-shadow: none;
 }
 
 .home-card-local {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--bo-control-h-sm);
   text-align: center;
-  padding: 7px 8px;
+  padding: 0 8px;
   border-radius: 8px;
   color: var(--bo-ink-faint);
   font-weight: 700;
@@ -380,15 +384,16 @@
 
 .home-card-setup select {
   flex: 0 1 auto;
+  height: var(--bo-control-h-sm);
   appearance: none;
   -webkit-appearance: none;
-  border: 1px solid var(--bo-line);
+  border: 1px solid var(--bo-line-strong);
   border-radius: 7px;
   background: var(--bo-surface) var(--bo-chevron) no-repeat right 8px center / 11px 7px;
   font: inherit;
   font-size: 0.84rem;
   color: var(--bo-ink);
-  padding: 5px 24px 5px 10px;
+  padding: 0 24px 0 10px;
   cursor: pointer;
 }
 
@@ -400,17 +405,11 @@
   border: 1.5px solid var(--bo-line-strong);
   border-radius: var(--bo-radius);
   background: var(--bo-surface);
-  overflow: hidden;
   transition: border-color 0.15s ease;
 }
 
 .home-card-ai:hover {
   border-color: #b58863;
-}
-
-.home-card-ai:focus-within {
-  border-color: var(--bo-accent);
-  box-shadow: 0 0 0 3px var(--bo-accent-wash);
 }
 
 .home-card-ai-link {
@@ -419,6 +418,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: calc(var(--bo-radius) - 2px) 0 0 calc(var(--bo-radius) - 2px);
   color: var(--bo-ink-soft);
   font-weight: 700;
   font-size: 0.88rem;
@@ -437,6 +437,7 @@
   -webkit-appearance: none;
   border: none;
   border-left: 1px solid var(--bo-line);
+  border-radius: 0 calc(var(--bo-radius) - 2px) calc(var(--bo-radius) - 2px) 0;
   background: var(--bo-sunk) var(--bo-chevron) no-repeat right 9px center / 11px 7px;
   font: inherit;
   font-size: 0.84rem;
@@ -446,6 +447,8 @@
   cursor: pointer;
 }
 
-.home-card-ai-level:focus-visible {
-  outline: none;
+/* The wrapper's :focus-within ring cannot say which of the two halves has
+   focus, so each half keeps its own. */
+.home-card-ai:focus-within {
+  border-color: var(--bo-accent);
 }

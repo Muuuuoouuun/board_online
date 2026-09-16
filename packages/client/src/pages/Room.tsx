@@ -106,17 +106,6 @@ export default function Room() {
   const opponent = roomData.players.find((p) => p.index !== you);
   const waitingForOpponent = roomData.players.length < 2;
 
-  let statusText: string;
-  if (status.status !== "ongoing") {
-    statusText = "";
-  } else if (waitingForOpponent) {
-    statusText = "친구가 들어오길 기다리는 중...";
-  } else if (!opponent?.connected) {
-    statusText = "상대방의 연결이 끊겼습니다. 잠시만 기다려주세요.";
-  } else {
-    statusText = myTurn ? "당신의 차례입니다" : "상대방의 차례입니다";
-  }
-
   let resultKind: ResultKind = "draw";
   let resultTitle = "";
   if (status.status === "win") {
@@ -125,6 +114,17 @@ export default function Room() {
   } else if (status.status === "draw") {
     resultKind = "draw";
     resultTitle = "무승부";
+  }
+
+  let statusText: string;
+  if (status.status !== "ongoing") {
+    statusText = resultTitle;
+  } else if (waitingForOpponent) {
+    statusText = "친구가 들어오길 기다리는 중...";
+  } else if (!opponent?.connected) {
+    statusText = "상대방의 연결이 끊겼습니다. 잠시만 기다려주세요.";
+  } else {
+    statusText = myTurn ? "당신의 차례입니다" : "상대방의 차례입니다";
   }
 
   return (
@@ -154,7 +154,11 @@ export default function Room() {
       <p className="you-label">
         나는 <strong>{engine.meta.playerLabels[you]}</strong>입니다
       </p>
-      {statusText && <p className="status-text">{statusText}</p>}
+      {statusText && (
+        <p className="status-text" aria-live="polite">
+          {statusText}
+        </p>
+      )}
       {moveError && <p className="error-text">{moveError}</p>}
 
       <div className="board-wrap">

@@ -370,7 +370,7 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
         .yb-chip--selected { background: var(--bo-accent); color: #ffffff; border-color: var(--bo-accent); }
         .yb-chip--static { background: var(--bo-sunk); color: var(--bo-ink-faint); cursor: default; }
         .yb-chip--waiting { background: var(--bo-surface); border-color: var(--bo-accent); color: var(--bo-accent); }
-        .yb-chip:disabled { opacity: 0.55; cursor: not-allowed; }
+        .yb-chip:disabled { opacity: 0.72; cursor: not-allowed; }
         .yb-yards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
         .yb-yard { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .yb-yard-owner { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 700; color: var(--bo-ink-faint); }

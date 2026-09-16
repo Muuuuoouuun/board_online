@@ -31,6 +31,9 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
   const [state, setState] = useState(() => engine.createInitialState(initialSetup));
   const [showRules, setShowRules] = useState(false);
   const [resultDismissed, setResultDismissed] = useState(false);
+  // Changing the opening formation starts a new game, so it stops being on offer
+  // once a move has been played.
+  const [started, setStarted] = useState(false);
 
   const status = engine.status(state);
   const turn = engine.turn(state);
@@ -44,15 +47,20 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
 
   function handleMove(move: Move) {
     const result = engine.applyMove(state, move, turn);
-    if (result.ok) setState(result.state);
+    if (result.ok) {
+      setStarted(true);
+      setState(result.state);
+    }
   }
 
   function handleReset() {
+    setStarted(false);
     setState(engine.createInitialState(setupId));
   }
 
   function handleSetupChange(next: string) {
     setSetupId(next);
+    setStarted(false);
     setState(engine.createInitialState(next));
   }
 
@@ -86,7 +94,12 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
           <div className="toolbar-group toolbar-group--settings">
             <label className="toolbar-setup">
               <span>배치</span>
-              <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
+              <select
+                value={setupId}
+                disabled={started}
+                title={started ? "판이 시작된 뒤에는 배치를 바꿀 수 없습니다" : undefined}
+                onChange={(e) => handleSetupChange(e.target.value)}
+              >
                 {setupOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -98,7 +111,9 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
         )}
       </div>
 
-      {status.status === "ongoing" && <p className="status-text">{engine.meta.playerLabels[turn]} 차례</p>}
+      <p className="status-text" aria-live="polite">
+        {status.status === "ongoing" ? `${engine.meta.playerLabels[turn]} 차례` : resultTitle}
+      </p>
 
       <div className="board-wrap">
         <GameView

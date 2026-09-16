@@ -50,7 +50,7 @@ function GameMotif({ id }: { id: GameId }) {
       {id === "chess" && (
         <>
           <CheckerboardCells darkFill="#b58863" lightFill="#efe2c6" />
-          <g fill="#2f6bff">
+          <g fill="#faf6ec" stroke="#2b2620" strokeWidth="1.1" strokeLinejoin="round">
             <path d="M21 43 L32 25 L43 43 Z" />
             <circle cx="32" cy="19" r="3.6" />
             <rect x="30.4" y="11" width="3.2" height="6.5" />
@@ -181,7 +181,7 @@ export default function Home() {
   const [busyGame, setBusyGame] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [setupChoice, setSetupChoice] = useState<Record<string, string>>({});
-  const [aiLevel, setAiLevel] = useState<AiLevel>("normal");
+  const [aiLevel, setAiLevel] = useState<Record<string, AiLevel>>({});
 
   async function handleCreate(gameId: string) {
     setBusyGame(gameId);
@@ -210,10 +210,9 @@ export default function Home() {
         <h1 className="home-hero-title">보드온라인</h1>
         <p className="home-hero-sub">로그인 없이, 방 코드 하나로 친구와 바로 한 판.</p>
         <ul className="home-feature-list">
-          <li>계정 없이 바로 시작</li>
-          <li>방 코드로 친구 초대</li>
           {/* Counted from the registry so adding a game can't leave this stale. */}
           <li>고전·전통 보드게임 {GAME_LIST.length}종</li>
+          <li>방 코드로 친구 초대</li>
           <li>혼자서도 컴퓨터와 대전</li>
         </ul>
       </header>
@@ -234,7 +233,7 @@ export default function Home() {
               autoComplete="off"
               spellCheck={false}
             />
-            <button className="home-join-btn" type="submit">
+            <button className="home-join-btn" type="submit" disabled={joinCode.trim().length === 0}>
               입장하기
             </button>
           </div>
@@ -281,13 +280,13 @@ export default function Home() {
                   {busy ? "방 만드는 중..." : "친구 초대하기"}
                 </button>
                 <div className="home-card-ai">
-                  <Link className="home-card-ai-link" to={aiPath(id, aiLevel, setupChoice[id])}>
+                  <Link className="home-card-ai-link" to={aiPath(id, aiLevel[id] ?? "normal", setupChoice[id])}>
                     컴퓨터와 대전
                   </Link>
                   <select
                     className="home-card-ai-level"
-                    value={aiLevel}
-                    onChange={(e) => setAiLevel(e.target.value as AiLevel)}
+                    value={aiLevel[id] ?? "normal"}
+                    onChange={(e) => setAiLevel((prev) => ({ ...prev, [id]: e.target.value as AiLevel }))}
                     aria-label={`${engine.meta.nameKo} 컴퓨터 난이도`}
                   >
                     {AI_LEVELS.map((l) => (
