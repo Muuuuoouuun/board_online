@@ -17,6 +17,11 @@ import { pickRandom } from "./random.js";
  *    traced polygon) are not sampled: they aim at the centres of own boundary
  *    cells within reach, ranked by the shoelace area of the polygon they would
  *    close. Aiming at a cell centre can never miss home by a hair.
+ *  - Mid-turn the return is the move itself, so there every own cell within
+ *    reach is simulated rather than the few the area ranking picks, and a
+ *    turn-ending move that wins the game is played at once at every level —
+ *    the flick equivalent of search.ts's findImmediateWin. An easy bot that
+ *    flicks past a winning return reads as broken, not easy.
  *  - Every candidate turn is simulated with the real engine and the resulting
  *    position scored by evaluate(). The best intermediate positions are kept
  *    and extended by one more flick (up to the three the rules allow). The
@@ -62,6 +67,8 @@ const CONTEST_BONUS = 0.7;
 const POTENTIAL_RADIUS = 12;
 const POTENTIAL_WEIGHT = 0.03;
 const GAME_OVER = 50_000;
+/** Scores at or above this can only come from a turn that ends the game won: |margin| + potential stay under 4,000. */
+const WIN_THRESHOLD = GAME_OVER / 2;
 
 const GIVE_UP: FlickMove = { kind: "giveup" };
 
@@ -70,7 +77,7 @@ interface LevelConfig {
   dirs: number;
   /** Powers tried in each direction. */
   powers: number[];
-  /** Return targets (own boundary cells) simulated per intermediate position. */
+  /** Return targets (own boundary cells) simulated per intermediate position; a mid-turn root tries every reachable own cell instead. */
   targets: number;
   /** Intermediate positions kept, by exact score, for one more flick. */
   beam: number;
@@ -330,6 +337,39 @@ function evaluateReturns(node: Node, cfg: LevelConfig, ctx: Ctx, search: Search)
 }
 
 /**
+ * Simulates a return to EVERY own cell within reach of `node` (interior cells
+ * too: a concave frontier can hide neutral pockets behind a boundary cell) and
+ * records their exact scores. Used at the root mid-turn, where the return is
+ * the move itself: ranking by shoelace area only guesses at what a polygon
+ * claims (it may cross own or enemy land, or fold over itself), and the return
+ * that decides the game is not always among the top few. At most ~730 cells,
+ * a few ms — deliberately not clocked, so a tight budget cannot lose the win.
+ */
+function evaluateAllReturns(node: Node, ctx: Ctx, search: Search): void {
+  const state = node.state;
+  const last = state.path[state.path.length - 1]!;
+  const grid = state.grid;
+  const y0 = Math.max(0, Math.floor(last.y - REACH));
+  const y1 = Math.min(SIZE - 1, Math.floor(last.y + REACH));
+  const x0 = Math.max(0, Math.floor(last.x - REACH));
+  const x1 = Math.min(SIZE - 1, Math.floor(last.x + REACH));
+  for (let y = y0; y <= y1; y++) {
+    const row = grid[y]!;
+    for (let x = x0; x <= x1; x++) {
+      if (row[x] !== ctx.me) continue;
+      const t: FlickPos = { x: x + 0.5, y: y + 0.5 };
+      if (dist2(last, t) > REACH_SQ) continue;
+      const move: FlickMove = { kind: "flick", dx: t.x - last.x, dy: t.y - last.y };
+      const r = flickEngine.applyMove(state, move, ctx.me);
+      if (!r.ok || r.state.turn === ctx.me) continue;
+      const score = evaluate(r.state, ctx);
+      if (score > node.exact) node.exact = score;
+      record(search, node.first ?? move, r.state, score);
+    }
+  }
+}
+
+/**
  * Largest polygon reachable with one more intermediate flick and a return:
  * the diversity key for the beam, so a first flick whose triangle is thin but
  * whose three-flick shapes are big is still extended.
@@ -403,7 +443,10 @@ function plan(state: FlickState, cfg: LevelConfig, ctx: Ctx, phase: number, coll
   if (giveUp.ok) record(search, GIVE_UP, giveUp.state, search.best.score);
 
   const root = makeNode(state, null, ctx);
-  evaluateReturns(root, cfg, ctx, search); // mid-turn: close the polygon now; fresh turn: a mere repositioning hop
+  if (state.path.length > 1) evaluateAllReturns(root, ctx, search); // a return closes the polygon now: try every one
+  else evaluateReturns(root, cfg, ctx, search); // fresh turn: a mere repositioning hop
+  // A turn end that wins the game (a return, or on the last round a plain give-up) is played now, not improved on.
+  if (search.best.score >= WIN_THRESHOLD) return search;
 
   let beam: Node[] = [root];
   const expansions = Math.min(cfg.expansions, state.flicksLeft - 1);
@@ -506,7 +549,7 @@ export const flickAi: AiProvider<FlickState, FlickMove> = {
       const search = plan(state, cfg, ctx, phase, withLookahead);
       let move = search.best.first;
       // A plan that ends the game in our favour is taken at every level, before any carelessness or re-scoring.
-      const wins = search.best.score >= GAME_OVER / 2;
+      const wins = search.best.score >= WIN_THRESHOLD;
       if (!wins && withLookahead) {
         ctx.deadline = start + budgetMs;
         ctx.timedOut = false;

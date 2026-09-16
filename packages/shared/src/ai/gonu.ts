@@ -1,52 +1,53 @@
 import type { Move, PlayerIndex, Rng } from "../types.js";
 import { gonuEngine, POINT_IDS, EDGES, type GonuState, type GonuBoardMap, type PointId } from "../games/gonu.js";
-import type { AiProvider } from "./types.js";
-import { makeSearchAi } from "./search.js";
+import type { AiOptions, AiProvider } from "./types.js";
+import { makeSearchAi, WIN_SCORE } from "./search.js";
 import { pickRandom } from "./random.js";
 
 /**
  * 우물고누 (Umul-gonu / "Well Gonu", internationally Pong Hau K'i) computer
  * opponent.
  *
- * The board has only 5 points and 4 stones, so the whole reachable state
- * graph is tiny — games/gonu.ts's own PLY_CAP comment puts an upper bound of
- * 30 board layouts x 2 turns-to-move = 60 distinct states on it. That has a
- * real consequence for how to build a good opponent here, not just for how
- * cheap the search is:
+ * The board has 5 points and 4 stones, so the whole game is tiny: only 56
+ * (board, side-to-move) states are reachable from the opening, and with the
+ * engine's 60-ply cap that is at most 30 x 60 = 1800 (board, turn, plies)
+ * states. Solving it exhaustively shows exactly what kind of game it is:
  *
- * With correct play from BOTH sides this game is a theoretical forever-draw
- * (games/gonu.ts: "with careful play (mirroring the opponent), neither side
- * can be forced into a trap") — confirmed below by exhaustively solving the
- * adversarial (minimax) value of the opening position, which comes out to
- * exactly 0. That means a classic alpha-beta search, however deep, will
- * always find that every move only *draws* against a perfect defender, and
- * — with no reason to prefer one drawing line over another — happily settles
- * into a safe repeating shuffle that never actually threatens a real
- * (imperfect) opponent. That is exactly what a mobility-only alpha-beta AI
- * does here in practice: it locks into a short cycle and draws every single
- * game, including against a *uniformly random* mover. Minimax's worst-case
- * assumption is simply the wrong model of a random opponent, who — unlike an
- * adversary — cannot reliably find the one safe reply out of two.
+ *  - 8 of the 56 states hold an immediate trap (the mover can leave the
+ *    opponent with no legal move and win on the spot);
+ *  - NO state is a forced loss for the mover: every position has at least one
+ *    move that does not hand over such a trap.
  *
- * So `normal` and `hard` use two different, deliberately mismatched engines:
+ * So the only mistake that exists is a single careless move that gives the
+ * opponent an immediate trap, and correct play (never doing that) draws for
+ * ever — hence the engine's ply cap. That has a real consequence for how an
+ * opponent must be built: a plain adversarial search rates every non-blunder
+ * as an equal draw, has nothing left to prefer one drawing move over another,
+ * and settles into a safe shuffle that never gives even a uniformly random
+ * mover the chance to blunder. That is not strength, it is a bot that cannot
+ * win. Being good here means never blundering AND steering the opponent
+ * towards the positions where they can. Each level does that differently:
  *
- *  - `normal` plays the exact move that maximizes the probability of
- *    eventually winning *against a uniformly random opponent* (ties broken
- *    by minimizing loss probability). Because the whole game graph is only a
- *    few thousand (board, turn, plies-so-far) states, this is computed
- *    exactly by backward induction rather than approximated — see
- *    `outcomeAgainstRandom` below — which reliably clears the ≥90% win-rate
- *    bar (solving from the opening position gives ~99.9% as the first player
- *    and ~92.4% as the second, well above it). This policy takes real risks
- *    a cautious opponent could in principle punish; that's fine, it exists
- *    to beat careless (random) play efficiently, not to be unbeatable.
- *  - `hard` (and the shallow, noisy `easy`) use the generic alpha-beta search
- *    from search.ts with a plain mobility/centre evaluation. Being adversarial
- *    and deep enough to see essentially the whole graph, `hard` never willingly
- *    loses and is exactly the kind of opponent that can catch `normal`'s
- *    riskier lines — which is what makes `hard` play visibly stronger head to
- *    head, even though neither engine can force a win from a game that is a
- *    theoretical draw.
+ *  - `easy`: the generic alpha-beta from search.ts, reading one ply with a
+ *    mobility/centre heuristic and playing at random 60% of the time. It still
+ *    takes an immediate trap (makeSearchAi checks that first) but walks into
+ *    them regularly, so it is genuinely beatable.
+ *  - `normal`: 6-ply expectimax against an opponent modelled as uniformly
+ *    random (its own moves maximise, the opponent's are averaged), with the
+ *    same heuristic at the horizon. It sets traps well and beats random play
+ *    far above the 90% bar, but it is honestly a mid level: when the safe
+ *    line looks dull to the heuristic it will take a coin flip (offer the
+ *    opponent a choice between trapping it and being trapped), which a
+ *    careless opponent misses half the time and `hard` punishes every time.
+ *  - `hard`: an exact solve of the remaining game by memoised backward
+ *    induction over (board, turn, plies) — see `solveBestMoves`. Each move is
+ *    valued lexicographically: first its minimax value (so `hard` never makes
+ *    a move a perfect opponent could punish; from any position it can be
+ *    handed it cannot lose), then, among equally safe moves, the exact
+ *    probability of winning against a uniformly random opponent. From the
+ *    opening that probability is 99.9% moving first and 88.8% moving second,
+ *    which is the best any policy can do against random play under the ply
+ *    cap; the rest of the games are draws, never losses.
  */
 
 function other(p: PlayerIndex): PlayerIndex {
@@ -83,7 +84,7 @@ function mobility(board: GonuBoardMap, player: PlayerIndex): number {
 }
 
 /* ------------------------------------------------------------------------ */
-/* `easy` / `hard`: generic adversarial alpha-beta (search.ts)              */
+/* Heuristic + generic adversarial alpha-beta (search.ts)                   */
 /* ------------------------------------------------------------------------ */
 
 /** Weight per extra stone `root` has adjacent to the empty point versus the opponent. */
@@ -96,7 +97,7 @@ const CENTRE_WEIGHT = 15;
  * Mobility is always tied 2-2 whenever C is the empty point (the other four
  * points are then all occupied, split evenly between the two players, since
  * nobody ever gains or loses a stone in this game) — the centre term is what
- * breaks that tie, favouring the more flexible player.
+ * breaks that tie, favouring the more flexible player. |value| <= 215.
  */
 function evaluate(state: GonuState, root: PlayerIndex): number {
   const opp = other(root);
@@ -106,17 +107,16 @@ function evaluate(state: GonuState, root: PlayerIndex): number {
 }
 
 /**
- * Depth is plies, not "moves" — with a branching factor of at most 2 (a
- * player owns only 2 stones, so at most 2 can ever be adjacent to the single
- * empty point) even `hard`'s depth 14 is cheap, so the time budget (search.ts's
- * iterative deepening stops when it runs out) is what actually bounds `hard`,
- * not the nominal depth. `easy` reads only one ply ahead and otherwise moves
- * at random — it still takes an immediate trap of the opponent, since
- * makeSearchAi checks that before rolling the dice.
+ * Configs for the generic search. `easy` is the only level that normally runs
+ * it: depth is plies, so it reads just its own move and otherwise moves at
+ * random (it still takes an immediate trap, since makeSearchAi checks that
+ * before rolling the dice). `hard` falls back to it only when the exact solve
+ * runs out of time, and `normal`'s entry is what makeSearchAi uses for a
+ * level id it does not recognise.
  */
 const LEVELS = {
   easy: { depth: 1, budgetMs: 100, randomness: 0.6 },
-  normal: { depth: 6, budgetMs: 500 }, // unused: "normal" is handled by outcomeAgainstRandom below
+  normal: { depth: 6, budgetMs: 500 },
   hard: { depth: 14, budgetMs: 1200 },
 };
 
@@ -127,35 +127,27 @@ const searchAi = makeSearchAi<GonuState, Move>({
 });
 
 /* ------------------------------------------------------------------------ */
-/* `normal`: expectimax against a uniformly random opponent                 */
+/* `normal`: bounded expectimax against a uniformly random opponent         */
 /* ------------------------------------------------------------------------ */
 
 /**
- * How many plies of "my move maximizes, the opponent's move averages" lookahead
- * `normal` does before falling back to the mobility/centre heuristic. This is
- * deliberately *not* exact (unlike `hard`'s adversarial search, which is deep
- * enough to see essentially the whole graph): a bounded, imperfect opponent
- * model is what gives `hard` — which sees further and can find and punish the
- * concrete mistakes this horizon causes — genuine room to play visibly
- * stronger. See the file header for why an exact solve here would actually
- * make `normal` *harder* to beat, not easier.
+ * Plies of "my move maximises, the opponent's move averages" lookahead before
+ * `normal` falls back to the heuristic. Deliberately bounded (unlike `hard`'s
+ * exact solve): beyond the horizon it cannot tell which drawing line offers
+ * the opponent more chances to go wrong, which is the room `hard` has to be
+ * visibly stronger. With at most 2 legal moves per ply this is under 130 nodes.
  */
 const NORMAL_DEPTH = 6;
 
-/** A value clearly outside evaluate()'s range (see EVAL_CLAMP-free bound above), so it always dominates a heuristic leaf. */
-const TERMINAL_VALUE = 1_000_000;
-
 /**
  * Expectimax value of `state` for `aiSeat`, looking `depthLeft` plies ahead:
- * `aiSeat`'s own turns maximize, the opponent's turns average over their
- * legal moves (modelling them as uniformly random) — exactly the search a
- * player who knows their opponent is careless, not adversarial, should run.
- * Beyond `depthLeft` (or at a real terminal) it falls back to the same
- * mobility/centre `evaluate()` used by the adversarial search below.
+ * `aiSeat`'s own turns maximise, the opponent's turns average over their
+ * legal moves (modelling them as uniformly random). Terminals score ±WIN_SCORE
+ * so they always dominate the heuristic used beyond the horizon.
  */
 function expectimaxValue(state: GonuState, aiSeat: PlayerIndex, depthLeft: number): number {
   const status = gonuEngine.status(state);
-  if (status.status === "win") return status.winner === aiSeat ? TERMINAL_VALUE : -TERMINAL_VALUE;
+  if (status.status === "win") return status.winner === aiSeat ? WIN_SCORE : -WIN_SCORE;
   if (status.status === "draw") return 0;
   if (depthLeft <= 0) return evaluate(state, aiSeat);
 
@@ -167,6 +159,9 @@ function expectimaxValue(state: GonuState, aiSeat: PlayerIndex, depthLeft: numbe
   return children.reduce((a, b) => a + b, 0) / children.length; // their move: average over a random reply
 }
 
+/** Tolerance for treating two floating-point move values as a tie. */
+const EPS = 1e-9;
+
 /** Among `legal`, the move(s) with the highest expectimax value for `player`. */
 function bestMovesAgainstRandom(state: GonuState, player: PlayerIndex, legal: Move[]): Move[] {
   const scored = legal.map((move) => ({
@@ -174,8 +169,108 @@ function bestMovesAgainstRandom(state: GonuState, player: PlayerIndex, legal: Mo
     value: expectimaxValue(gonuEngine.applyMove(state, move, player).state, player, NORMAL_DEPTH - 1),
   }));
   const best = Math.max(...scored.map((s) => s.value));
-  const EPS = 1e-9;
   return scored.filter((s) => Math.abs(s.value - best) < EPS).map((s) => s.move);
+}
+
+/* ------------------------------------------------------------------------ */
+/* `hard`: exact solve — minimax first, then win probability vs random      */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Value of a state for the AI seat. `minimax` is the classic adversarial
+ * value (+1 forced win, 0 draw, -1 forced loss, ply cap included). `random`
+ * is P(win) - P(loss) against a uniformly random opponent when the AI follows
+ * the policy below, i.e. always picks the child with the best `minimax` and,
+ * among those, the best `random`. Both come out of the one recursion: the
+ * opponent's nodes take the minimum for `minimax` and the average for `random`.
+ */
+interface SolvedValue {
+  minimax: number;
+  random: number;
+}
+
+interface SolveCtx {
+  /** Values by (board, turn, plies). Plies always grow, so the recursion is acyclic. */
+  memo: Map<string, SolvedValue>;
+  now: () => number;
+  deadline: number;
+  nodes: number;
+  timedOut: boolean;
+}
+
+/** Board occupancy plus side to move plus ply count — everything the value depends on. */
+function stateKey(state: GonuState): string {
+  let key = "";
+  for (const id of POINT_IDS) {
+    const owner = state.board[id];
+    key += owner === null ? "." : owner;
+  }
+  return `${key}${state.turn}:${state.plies}`;
+}
+
+const DRAWN: SolvedValue = { minimax: 0, random: 0 };
+
+function solveValue(state: GonuState, aiSeat: PlayerIndex, ctx: SolveCtx): SolvedValue {
+  const status = gonuEngine.status(state);
+  if (status.status === "win") return status.winner === aiSeat ? { minimax: 1, random: 1 } : { minimax: -1, random: -1 };
+  if (status.status !== "ongoing") return DRAWN; // the ply cap
+  const key = stateKey(state);
+  const hit = ctx.memo.get(key);
+  if (hit) return hit;
+  if ((++ctx.nodes & 31) === 0 && ctx.now() >= ctx.deadline) ctx.timedOut = true;
+  if (ctx.timedOut) return DRAWN; // placeholder; the caller throws the whole answer away
+
+  const mover = state.turn;
+  const moves = gonuEngine.legalMoves(state, mover);
+  const ours = mover === aiSeat;
+  let minimax = ours ? -Infinity : Infinity;
+  let random = ours ? -Infinity : 0;
+  let count = 0;
+  for (const move of moves) {
+    const r = gonuEngine.applyMove(state, move, mover);
+    if (!r.ok) continue;
+    const child = solveValue(r.state, aiSeat, ctx);
+    count++;
+    if (ours) {
+      // Lexicographic max: safety first, then chances against a careless opponent.
+      if (child.minimax > minimax || (child.minimax === minimax && child.random > random)) {
+        minimax = child.minimax;
+        random = child.random;
+      }
+    } else {
+      if (child.minimax < minimax) minimax = child.minimax;
+      random += child.random;
+    }
+  }
+  if (count === 0) return DRAWN; // unreachable: the engine only leaves "ongoing" states with a legal move
+  const value: SolvedValue = ours ? { minimax, random } : { minimax, random: random / count };
+  if (!ctx.timedOut) ctx.memo.set(key, value);
+  return value;
+}
+
+/**
+ * Exactly solves the rest of the game from `state` and returns the legal
+ * moves that are lexicographically best for `player` (all of them, so the
+ * caller can vary between equal choices), or null if the clock ran out first.
+ * From the opening the solve touches 1190 states and takes a few
+ * milliseconds; later positions are smaller still.
+ */
+function solveBestMoves(state: GonuState, player: PlayerIndex, legal: Move[], now: () => number, deadline: number): Move[] | null {
+  const ctx: SolveCtx = { memo: new Map(), now, deadline, nodes: 0, timedOut: false };
+  const scored: { move: Move; value: SolvedValue }[] = [];
+  for (const move of legal) {
+    const r = gonuEngine.applyMove(state, move, player);
+    if (!r.ok) continue;
+    const value = solveValue(r.state, player, ctx);
+    if (ctx.timedOut) return null;
+    scored.push({ move, value });
+  }
+  if (scored.length === 0) return null;
+  let best = scored[0]!.value;
+  for (const s of scored) {
+    if (s.value.minimax > best.minimax || (s.value.minimax === best.minimax && s.value.random > best.random)) best = s.value;
+  }
+  return scored.filter((s) => s.value.minimax === best.minimax && Math.abs(s.value.random - best.random) < EPS).map((s) => s.move);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -192,10 +287,23 @@ function fallback(state: GonuState, player: PlayerIndex, rng: Rng): Move | null 
   }
 }
 
+function chooseHard(state: GonuState, player: PlayerIndex, legal: Move[], options: AiOptions, rng: Rng): Move {
+  const now = options.now ?? Date.now;
+  const deadline = now() + (options.budgetMs ?? LEVELS.hard.budgetMs);
+  const best = solveBestMoves(state, player, legal, now, deadline);
+  if (best && best.length > 0) return pickRandom(best, rng);
+  // Out of time before the (tiny) solve finished — only plausible with a budget
+  // of a millisecond or two on a stalled machine. The generic adversarial
+  // search degrades gracefully with whatever is left and still takes an
+  // immediate trap.
+  const remaining = Math.max(0, deadline - now());
+  return searchAi.chooseMove(state, player, "hard", { ...options, budgetMs: remaining }) ?? pickRandom(legal, rng);
+}
+
 export const gonuAi: AiProvider<GonuState, Move> = {
-  // The exact policy against random play wins ~99.9% as the first seat and
-  // ~92.4% as the second (solved once, offline, from the opening position),
-  // comfortably above the harness's 90% bar even averaged over both seats.
+  // `normal` beats random play well above 90% in practice (the exact optimum
+  // against a random mover is 99.9% moving first and 88.8% moving second under
+  // the ply cap, and `normal`'s 6-ply expectimax is close to it).
   testProfile: { games: 20, minWinRate: 0.9, budgetMs: 40 },
   chooseMove(state, player, level, options = {}) {
     const rng = options.rng ?? Math.random;
@@ -205,10 +313,9 @@ export const gonuAi: AiProvider<GonuState, Move> = {
       if (legal.length === 0) return null;
       if (legal.length === 1) return legal[0]!;
 
-      if (level === "normal") {
-        return pickRandom(bestMovesAgainstRandom(state, player, legal), rng);
-      }
-      // easy & hard: the generic adversarial search above.
+      if (level === "hard") return chooseHard(state, player, legal, options, rng);
+      if (level === "normal") return pickRandom(bestMovesAgainstRandom(state, player, legal), rng);
+      // `easy` (and any level id we do not know): the generic search above.
       return searchAi.chooseMove(state, player, level, options) ?? pickRandom(legal, rng);
     } catch {
       return fallback(state, player, rng);
