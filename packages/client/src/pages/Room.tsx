@@ -7,6 +7,7 @@ import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
+import PageBar from "../components/PageBar.js";
 
 interface RoomData {
   gameId: GameId;
@@ -128,25 +129,26 @@ export default function Room() {
 
   return (
     <div className="page room-page">
-      <div className="room-header">
-        <h1>{engine.meta.nameKo}</h1>
+      <PageBar title={engine.meta.nameKo} mode="친구와 대전">
         <div className="room-code-box">
           <span>방 코드</span>
           <strong>{code}</strong>
-          <button onClick={handleCopyLink}>{copied ? "복사됨!" : "초대 링크 복사"}</button>
+          <button onClick={handleCopyLink}>{copied ? "복사됨" : "초대 링크 복사"}</button>
         </div>
-      </div>
+      </PageBar>
 
       <div className="toolbar">
-        <button className="secondary-btn" onClick={() => setShowRules(true)}>
-          규칙 보기
-        </button>
-        <SoundToggle />
-        {status.status !== "ongoing" && resultDismissed && (
-          <button className="rematch-btn" onClick={handleRematch}>
-            다시 하기
+        <div className="toolbar-group">
+          <button className="secondary-btn" onClick={() => setShowRules(true)}>
+            규칙
           </button>
-        )}
+          <SoundToggle />
+          {status.status !== "ongoing" && resultDismissed && (
+            <button className="rematch-btn" onClick={handleRematch}>
+              다시 하기
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="you-label">
@@ -166,10 +168,6 @@ export default function Room() {
           you={you}
         />
       </div>
-
-      <Link to="/" className="leave-link">
-        홈으로
-      </Link>
 
       <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={roomData.gameId} />
       <ResultModal

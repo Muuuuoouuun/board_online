@@ -43,21 +43,19 @@
   display: inline-block;
   padding: 6px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ffffff 0%, #f4ead2 100%);
-  border: 1px solid #e3d3ab;
-  color: #8a6a45;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line-strong);
+  color: var(--bo-ink-soft);
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 2px rgba(138, 106, 69, 0.15);
 }
 
 .home-hero-title {
   margin: 8px 0 0;
   font-size: clamp(2.1rem, 7vw, 3rem);
   font-weight: 800;
-  letter-spacing: -0.01em;
-  color: #241d15;
+  letter-spacing: -0.02em;
+  color: var(--bo-ink);
   position: relative;
   display: inline-block;
 }
@@ -74,8 +72,8 @@
 
 .home-hero-sub {
   margin: 0;
-  color: #52606d;
-  font-size: 1.05rem;
+  color: var(--bo-ink-soft);
+  font-size: 1.02rem;
 }
 
 .home-feature-list {
@@ -89,14 +87,13 @@
 }
 
 .home-feature-list li {
-  background: #ffffff;
-  border: 1px solid #e5ddc8;
-  color: #5c4a30;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line);
+  color: var(--bo-ink-soft);
   font-size: 0.82rem;
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 999px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* --- Join by code --- */
@@ -104,11 +101,11 @@
 .home-join {
   width: 100%;
   max-width: 480px;
-  background: #ffffff;
-  border: 1px solid #e7ddc4;
-  border-radius: 16px;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-radius-lg);
   padding: 18px 20px;
-  box-shadow: 0 4px 16px rgba(90, 66, 32, 0.08);
+  box-shadow: var(--bo-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -123,7 +120,7 @@
 .home-join-label {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #8a6a45;
+  color: var(--bo-ink-soft);
 }
 
 .home-join-row {
@@ -134,15 +131,16 @@
 .home-join-input {
   flex: 1;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 11px 14px;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
   text-transform: uppercase;
-  border: 2px solid #e3d3ab;
-  border-radius: 10px;
-  background: #fbf8f0;
-  color: #1f2933;
+  border: 1.5px solid var(--bo-line-strong);
+  border-radius: var(--bo-radius);
+  background: var(--bo-sunk);
+  color: var(--bo-ink);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
@@ -154,40 +152,32 @@
 
 .home-join-input:focus {
   outline: none;
-  border-color: #2f6bff;
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
-  background: #ffffff;
+  border-color: var(--bo-accent);
+  box-shadow: 0 0 0 3px var(--bo-accent-wash);
+  background: var(--bo-surface);
 }
 
 .home-join-btn {
   flex-shrink: 0;
-  border: none;
-  border-radius: 10px;
+  border-radius: var(--bo-radius);
   padding: 0 20px;
-  background: #2f6bff;
+  background: var(--bo-accent);
   color: #ffffff;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 2px 6px rgba(47, 107, 255, 0.3);
+  box-shadow: var(--bo-shadow-sm);
 }
 
 .home-join-btn:hover {
-  background: #1f52d1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
-}
-
-.home-join-btn:active {
-  transform: translateY(0);
+  background: var(--bo-accent-deep);
 }
 
 .home-error {
   margin: 0;
-  color: #b3261e;
+  color: var(--bo-warn);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 /* --- Game grid --- */
@@ -211,50 +201,51 @@
 }
 
 .home-card {
-  background: linear-gradient(180deg, #ffffff 0%, #fdfbf5 100%);
-  border: 1px solid #ece3cd;
-  border-radius: 18px;
-  padding: 20px;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-radius-lg);
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 2px 8px rgba(90, 66, 32, 0.07);
+  box-shadow: var(--bo-shadow-sm);
   opacity: 0;
   animation: home-card-in 0.5s ease-out forwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .home-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px rgba(90, 66, 32, 0.16);
-  border-color: #dfb579;
+  box-shadow: var(--bo-shadow-md);
+  border-color: var(--bo-line-strong);
 }
 
 .home-card:hover .home-motif-svg {
   transform: scale(1.06);
 }
 
-.home-card:focus-within {
-  border-color: #2f6bff;
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.14);
+/* Name and board sit on one line: the motif is the game's label, not a banner. */
+.home-card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .home-card-motif {
-  align-self: flex-start;
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #f6efdd, #ead9b3);
   border: 1px solid #e3d3ab;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 1px 3px rgba(90, 66, 32, 0.12);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .home-motif-svg {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: block;
   transition: transform 0.2s ease;
 }
@@ -262,23 +253,29 @@
 .home-card-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .home-card-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  color: #1f2933;
+  letter-spacing: -0.01em;
+  color: var(--bo-ink);
 }
 
 .home-card-players {
-  color: #8a6a45;
-  font-size: 0.82rem;
+  color: var(--bo-ink-faint);
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
+/*
+ * Three ways to start, in the order people pick them, each at its own weight:
+ * a filled button to invite a friend, an outlined pair to play the computer,
+ * and a quiet line for handing one screen back and forth.
+ */
 .home-card-actions {
   display: flex;
   flex-direction: column;
@@ -287,57 +284,44 @@
 }
 
 .home-card-primary {
-  border: none;
-  border-radius: 10px;
-  padding: 11px 16px;
-  background: #2f6bff;
+  width: 100%;
+  border-radius: var(--bo-radius);
+  background: var(--bo-accent);
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(47, 107, 255, 0.3);
-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--bo-shadow-sm);
 }
 
 .home-card-primary:hover:not(:disabled) {
-  background: #1f52d1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
-}
-
-.home-card-primary:active:not(:disabled) {
-  transform: translateY(0);
+  background: var(--bo-accent-deep);
 }
 
 .home-card-primary:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+  opacity: 0.55;
   box-shadow: none;
 }
 
-.home-card-secondary {
+.home-card-local {
   text-align: center;
-  padding: 9px 16px;
-  border-radius: 10px;
-  border: 1.5px solid #dfd3b8;
-  color: #6b5638;
+  padding: 7px 8px;
+  border-radius: 8px;
+  color: var(--bo-ink-faint);
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   text-decoration: none;
-  background: transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.home-card-secondary:hover {
-  background: #f6efdd;
-  border-color: #b58863;
-  color: #4a3a24;
+.home-card-local:hover {
+  background: var(--bo-sunk);
+  color: var(--bo-ink-soft);
 }
 
 /* --- Footer --- */
 
 .home-footer {
-  color: #9aa5b1;
+  color: var(--bo-ink-faint);
   font-size: 0.85rem;
   text-align: center;
   margin-top: 4px;
@@ -374,15 +358,10 @@
 
   .home-card,
   .home-card-primary,
+  .home-card-ai,
   .home-join-btn,
   .home-motif-svg {
     transition: none;
-  }
-
-  .home-card:hover,
-  .home-card-primary:hover:not(:disabled),
-  .home-join-btn:hover {
-    transform: none;
   }
 }
 
@@ -391,54 +370,82 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 10px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #6b5640;
+  padding: 7px 8px 7px 12px;
+  border-radius: 9px;
+  background: var(--bo-sunk);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bo-ink-faint);
 }
 
 .home-card-setup select {
   flex: 0 1 auto;
-  border: 1px solid #e0d2ba;
-  border-radius: 8px;
-  background: #fffdf8;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--bo-line);
+  border-radius: 7px;
+  background: var(--bo-surface) var(--bo-chevron) no-repeat right 8px center / 11px 7px;
   font: inherit;
-  color: #3f342a;
-  padding: 6px 8px;
+  font-size: 0.84rem;
+  color: var(--bo-ink);
+  padding: 5px 24px 5px 10px;
   cursor: pointer;
 }
 
-.home-card-setup select:focus-visible {
-  outline: 2px solid #2f6bff;
-  outline-offset: 1px;
-}
-
-/* --- Computer opponent row on each card --- */
-
+/* Playing the computer is one decision with two parts, so it is one control. */
 .home-card-ai {
   display: flex;
-  gap: 6px;
+  align-items: stretch;
+  height: var(--bo-control-h);
+  border: 1.5px solid var(--bo-line-strong);
+  border-radius: var(--bo-radius);
+  background: var(--bo-surface);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.home-card-ai:hover {
+  border-color: #b58863;
+}
+
+.home-card-ai:focus-within {
+  border-color: var(--bo-accent);
+  box-shadow: 0 0 0 3px var(--bo-accent-wash);
 }
 
 .home-card-ai-link {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bo-ink-soft);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.home-card-ai-link:hover {
+  background: var(--bo-sunk);
+  color: var(--bo-ink);
 }
 
 .home-card-ai-level {
   flex: 0 0 auto;
-  border: 1.5px solid #dfd3b8;
-  border-radius: 10px;
-  background: #fffdf8;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-left: 1px solid var(--bo-line);
+  background: var(--bo-sunk) var(--bo-chevron) no-repeat right 9px center / 11px 7px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  color: #6b5638;
-  padding: 0 8px;
+  color: var(--bo-ink-soft);
+  padding: 0 24px 0 11px;
   cursor: pointer;
 }
 
 .home-card-ai-level:focus-visible {
-  outline: 2px solid #2f6bff;
-  outline-offset: 1px;
+  outline: none;
 }

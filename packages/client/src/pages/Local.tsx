@@ -5,6 +5,7 @@ import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
+import PageBar from "../components/PageBar.js";
 
 export default function Local() {
   const params = useParams<{ gameId: string }>();
@@ -67,29 +68,33 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
 
   return (
     <div className="page">
-      <h1>{engine.meta.nameKo} · 같은 화면 2인 플레이</h1>
+      <PageBar title={engine.meta.nameKo} mode="같은 화면 2인" />
 
       <div className="toolbar">
-        <button className="secondary-btn" onClick={() => setShowRules(true)}>
-          규칙 보기
-        </button>
-        <SoundToggle />
-        {setupOptions && (
-          <label className="toolbar-setup">
-            <span>배치</span>
-            <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
-              {setupOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {status.status !== "ongoing" && resultDismissed && (
-          <button className="rematch-btn" onClick={handleReset}>
-            처음부터 다시
+        <div className="toolbar-group">
+          <button className="secondary-btn" onClick={() => setShowRules(true)}>
+            규칙
           </button>
+          <SoundToggle />
+          {status.status !== "ongoing" && resultDismissed && (
+            <button className="rematch-btn" onClick={handleReset}>
+              다시 하기
+            </button>
+          )}
+        </div>
+        {setupOptions && (
+          <div className="toolbar-group toolbar-group--settings">
+            <label className="toolbar-setup">
+              <span>배치</span>
+              <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
+                {setupOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         )}
       </div>
 
@@ -106,10 +111,6 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
           you={null}
         />
       </div>
-
-      <Link to="/" className="leave-link">
-        홈으로
-      </Link>
 
       <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={gameId} />
       <ResultModal

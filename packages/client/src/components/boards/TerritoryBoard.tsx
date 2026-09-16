@@ -127,8 +127,8 @@ export default function TerritoryBoard({ state, legalMoves, onMove, interactive,
         .terr-score-row { display: flex; gap: 10px; width: 100%; max-width: 480px; }
         .terr-score {
           flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
-          padding: 8px 12px; border-radius: 10px; background: #ffffff;
-          border: 1px solid #e5ddc8; font-weight: 700; font-size: 0.85rem; color: #3a2a16;
+          padding: 8px 12px; border-radius: 10px; background: var(--bo-surface);
+          border: 1px solid var(--bo-line); font-weight: 700; font-size: 0.85rem; color: var(--bo-ink);
         }
         .terr-score--you { box-shadow: 0 0 0 2px currentColor inset; }
         .terr-score-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: currentColor; }

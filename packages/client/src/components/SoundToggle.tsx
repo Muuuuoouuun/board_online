@@ -16,9 +16,10 @@ export default function SoundToggle() {
       className="secondary-btn sound-toggle"
       onClick={toggle}
       aria-pressed={muted}
+      aria-label={muted ? "소리 켜기" : "소리 끄기"}
       title={muted ? "소리 켜기" : "소리 끄기"}
     >
-      {muted ? "🔇 소리 꺼짐" : "🔊 소리 켜짐"}
+      {muted ? "🔇 음소거" : "🔊 소리"}
     </button>
   );
 }

@@ -299,20 +299,20 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
 
       <style>{`
         .fb-wrap { width: 100%; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
-        .fb-stats { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; color: #52606d; font-weight: 600; }
-        .fb-stat { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        .fb-stat--active { box-shadow: 0 0 0 2px rgba(47,107,255,0.35), 0 1px 3px rgba(0,0,0,0.08); }
-        .fb-stat strong { color: #1f2933; font-size: 0.95rem; }
+        .fb-stats { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; color: var(--bo-ink-soft); font-weight: 600; }
+        .fb-stat { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--bo-surface); border: 1px solid var(--bo-line); }
+        .fb-stat--active { border-color: var(--bo-accent); box-shadow: 0 0 0 2px var(--bo-accent-wash); }
+        .fb-stat strong { color: var(--bo-ink); font-size: 0.95rem; }
         .fb-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
         .fb-flicks { display: flex; gap: 5px; align-items: center; }
-        .fb-pip { width: 10px; height: 10px; border-radius: 50%; background: #e4e7eb; border: 1.5px solid #cbd2d9; display: inline-block; }
+        .fb-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--bo-sunk); border: 1.5px solid var(--bo-line-strong); display: inline-block; }
         .fb-pip--on { background: var(--pip-color, #2f6bff); border-color: transparent; }
-        .fb-reason { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: #7b8794; animation: fb-fade-in 220ms ease-out; }
+        .fb-reason { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--bo-ink-faint); animation: fb-fade-in 220ms ease-out; }
         .fb-svg { width: 100%; height: auto; display: block; touch-action: none; }
         .fb-stone--active { animation: fb-pulse 1.6s ease-in-out infinite; }
         .fb-actions { display: flex; justify-content: center; }
-        .fb-giveup { background: #e4e7eb; color: #323f4b; font-size: 0.8rem; padding: 7px 14px; }
-        .fb-giveup:hover:not(:disabled) { background: #cbd2d9; }
+        .fb-giveup { background: var(--bo-surface); border: 1px solid var(--bo-line); color: var(--bo-ink-soft); font-size: 0.82rem; min-height: 34px; padding: 0 14px; }
+        .fb-giveup:hover:not(:disabled) { background: var(--bo-sunk); border-color: var(--bo-line-strong); color: var(--bo-ink); }
         @keyframes fb-pulse { 0%, 100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); } 50% { filter: drop-shadow(0 0 2px rgba(0,0,0,0.4)); } }
         @keyframes fb-fade-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
         @media (prefers-reduced-motion: reduce) {

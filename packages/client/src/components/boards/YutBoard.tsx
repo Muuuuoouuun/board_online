@@ -354,7 +354,7 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
       <style>{`
         .yb-wrap { width: 100%; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
         .yb-status { min-height: 1px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .yb-hint { margin: 0; font-size: 0.9rem; font-weight: 600; color: #52606d; text-align: center; }
+        .yb-hint { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--bo-ink-soft); text-align: center; }
         .yb-throwresult { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .yb-sticks { display: flex; gap: 5px; }
         .yb-stick { width: 12px; height: 38px; border-radius: 6px; display: inline-block; }
@@ -364,16 +364,16 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
         .yb-controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .yb-pending { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .yb-chip {
-          background: white; color: #323f4b; border: 1.5px solid #cbd2d9; border-radius: 999px;
+          background: var(--bo-surface); color: var(--bo-ink-soft); border: 1.5px solid var(--bo-line-strong); border-radius: 999px;
           padding: 6px 12px; font-size: 0.85rem; font-weight: 700;
         }
-        .yb-chip--selected { background: ${ACCENT}; color: white; border-color: ${ACCENT}; }
-        .yb-chip--static { background: #e4e7eb; color: #323f4b; cursor: default; }
-        .yb-chip--waiting { background: white; border-color: ${ACCENT}; color: ${ACCENT}; }
+        .yb-chip--selected { background: var(--bo-accent); color: #ffffff; border-color: var(--bo-accent); }
+        .yb-chip--static { background: var(--bo-sunk); color: var(--bo-ink-faint); cursor: default; }
+        .yb-chip--waiting { background: var(--bo-surface); border-color: var(--bo-accent); color: var(--bo-accent); }
         .yb-chip:disabled { opacity: 0.55; cursor: not-allowed; }
         .yb-yards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
         .yb-yard { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
-        .yb-yard-owner { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 700; color: #52606d; }
+        .yb-yard-owner { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 700; color: var(--bo-ink-faint); }
         .yb-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
       `}</style>
     </div>

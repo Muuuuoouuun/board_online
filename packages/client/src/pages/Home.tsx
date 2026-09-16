@@ -252,13 +252,15 @@ export default function Home() {
           const busy = busyGame === id;
           return (
             <article className="home-card" key={id} style={{ animationDelay: `${i * 70}ms` }}>
-              <div className="home-card-motif">
-                <GameMotif id={id} />
-              </div>
-              <div className="home-card-body">
-                <h2 className="home-card-title">{engine.meta.nameKo}</h2>
-                <span className="home-card-players">{engine.meta.playerLabels.join(" vs ")}</span>
-              </div>
+              <header className="home-card-head">
+                <div className="home-card-motif">
+                  <GameMotif id={id} />
+                </div>
+                <div className="home-card-body">
+                  <h2 className="home-card-title">{engine.meta.nameKo}</h2>
+                  <span className="home-card-players">{engine.meta.playerLabels.join(" vs ")}</span>
+                </div>
+              </header>
               {engine.meta.setupOptions && (
                 <label className="home-card-setup">
                   <span>시작 배치</span>
@@ -276,10 +278,10 @@ export default function Home() {
               )}
               <div className="home-card-actions">
                 <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
-                  {busy ? "방 만드는 중..." : "친구와 온라인으로"}
+                  {busy ? "방 만드는 중..." : "친구 초대하기"}
                 </button>
                 <div className="home-card-ai">
-                  <Link className="home-card-secondary home-card-ai-link" to={aiPath(id, aiLevel, setupChoice[id])}>
+                  <Link className="home-card-ai-link" to={aiPath(id, aiLevel, setupChoice[id])}>
                     컴퓨터와 대전
                   </Link>
                   <select
@@ -296,7 +298,7 @@ export default function Home() {
                   </select>
                 </div>
                 <Link
-                  className="home-card-secondary"
+                  className="home-card-local"
                   to={setupChoice[id] ? `/local/${id}?setup=${encodeURIComponent(setupChoice[id])}` : `/local/${id}`}
                 >
                   같은 화면 2인 플레이

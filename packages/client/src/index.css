@@ -1,3 +1,52 @@
+/*
+ * Design tokens.
+ *
+ * The palette is taken from the material the games are actually made of:
+ * paper and pale wood for the ground, ink for text, and 쪽빛 indigo — the
+ * traditional Korean dye — for anything you can act on. Indigo rather than a
+ * screen blue because it has to sit next to nine wooden boards without
+ * shouting over them, and because the board surfaces themselves already own
+ * the warm end of the palette.
+ */
+:root {
+  --bo-ground: #f5f3ee;
+  --bo-surface: #fffdf8;
+  --bo-sunk: #f7f1e3;
+  --bo-line: #e6dcc4;
+  --bo-line-strong: #d3c3a0;
+
+  --bo-ink: #241d15;
+  /* Both secondary inks clear 4.5:1 on every surface here: 7.9:1 and 4.7:1. */
+  --bo-ink-soft: #5d4d39;
+  --bo-ink-faint: #786a52;
+
+  --bo-accent: #2e4a86;
+  --bo-accent-deep: #22386a;
+  --bo-accent-wash: rgba(46, 74, 134, 0.1);
+
+  --bo-go: #1f7a4d;
+  --bo-go-deep: #17603c;
+  --bo-warn: #b3261e;
+
+  --bo-radius: 10px;
+  --bo-radius-lg: 16px;
+  /* One height for every button, select and chip that sits in a control row. */
+  --bo-control-h: 38px;
+
+  --bo-shadow-sm: 0 1px 2px rgba(90, 66, 32, 0.08);
+  --bo-shadow-md: 0 4px 14px rgba(90, 66, 32, 0.1);
+  --bo-shadow-lg: 0 14px 30px rgba(90, 66, 32, 0.16);
+
+  /*
+   * Board highlights stay a bright blue rather than the chrome indigo: these
+   * sit on wood and felt at low opacity, where a deep indigo reads as shadow.
+   */
+  --bo-board-focus: #2f6bff;
+
+  /* Chevron for every custom-styled <select>, tinted to match the ink. */
+  --bo-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.4 1.6 6 6.2l4.6-4.6' fill='none' stroke='%235d4d39' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
 * {
   box-sizing: border-box;
 }
@@ -9,169 +58,162 @@ html, body, #root {
 body {
   margin: 0;
   font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f3ee;
-  color: #1f2933;
+  background: var(--bo-ground);
+  color: var(--bo-ink);
+}
+
+/* One focus treatment for the whole app, so keyboard users get the same
+   affordance on links, buttons and selects alike. */
+:focus-visible {
+  outline: 2px solid var(--bo-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .page {
   max-width: 880px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 16px 16px 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
-.hero {
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.hero h1 {
-  font-size: 2.2rem;
-  margin: 0 0 8px;
-}
-
-.hero p {
-  color: #52606d;
-  margin: 0;
-}
-
-.join-form {
-  display: flex;
-  gap: 8px;
+/*
+ * Top bar of a game page: leaving is the one thing a player needs that is not
+ * about the game, so it sits in the corner rather than below a board they
+ * would have to scroll past.
+ */
+.page-bar {
   width: 100%;
-  max-width: 420px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
 }
 
-.join-form input {
-  flex: 1;
-  padding: 10px 12px;
-  font-size: 1rem;
-  border: 1px solid #cbd2d9;
-  border-radius: 8px;
-  text-transform: uppercase;
+.page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bo-line-strong);
+  background: var(--bo-surface);
+  color: var(--bo-ink-soft);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.page-back:hover {
+  border-color: var(--bo-line-strong);
+  background: var(--bo-sunk);
+  color: var(--bo-ink);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--bo-ink);
+}
+
+.page-title-mode {
+  color: var(--bo-ink-faint);
+  font-weight: 700;
 }
 
 button {
   cursor: pointer;
   border: none;
-  border-radius: 8px;
-  background: #2f6bff;
-  color: white;
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  border-radius: var(--bo-radius);
+  background: var(--bo-accent);
+  color: #ffffff;
+  min-height: var(--bo-control-h);
+  padding: 0 16px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 button:hover:not(:disabled) {
-  background: #1f52d1;
+  background: var(--bo-accent-deep);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .error-text {
-  color: #c0362c;
-  font-weight: 600;
-}
-
-.game-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  width: 100%;
-}
-
-.game-card {
-  background: white;
-  border-radius: 12px;
-  padding: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.game-card h2 {
-  margin: 0;
-}
-
-.game-card-sub {
-  color: #7b8794;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.game-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.game-card-actions a {
-  text-align: center;
-  color: #2f6bff;
-  font-weight: 600;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.game-card-actions a:hover {
-  text-decoration: underline;
-}
-
-.home-footer {
-  color: #9aa5b1;
-  font-size: 0.85rem;
-  margin-top: 16px;
+  color: var(--bo-warn);
+  font-weight: 700;
 }
 
 .room-page {
   width: 100%;
 }
 
-.room-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.room-header h1 {
-  margin: 0;
-}
-
 .room-code-box {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: white;
-  border-radius: 8px;
-  padding: 8px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: 10px;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line);
+  border-radius: var(--bo-radius);
+  padding: 6px 6px 6px 14px;
+  box-shadow: var(--bo-shadow-sm);
+}
+
+.room-code-box > span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bo-ink-faint);
 }
 
 .room-code-box strong {
-  font-size: 1.1rem;
-  letter-spacing: 2px;
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bo-ink);
 }
 
+.room-code-box button {
+  font-size: 0.82rem;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+/* Who you are, and what the game is waiting for. Two lines, two weights. */
 .you-label {
   margin: 0;
-  color: #52606d;
+  max-width: 44ch;
+  text-align: center;
+  color: var(--bo-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.you-label strong {
+  color: var(--bo-ink);
 }
 
 .status-text {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   margin: 0;
+  color: var(--bo-ink);
 }
 
 .board-wrap {
@@ -216,7 +258,7 @@ button:hover:not(:disabled) {
 
 .board-selectable {
   fill: none;
-  stroke: #2f6bff;
+  stroke: var(--bo-board-focus);
   stroke-opacity: 0.32;
   stroke-width: 2;
   pointer-events: none;
@@ -224,7 +266,7 @@ button:hover:not(:disabled) {
 
 .board-selected {
   fill: none;
-  stroke: #2f6bff;
+  stroke: var(--bo-board-focus);
   stroke-width: 3;
   pointer-events: none;
   animation: bo-selected-pulse 1.3s ease-in-out infinite;
@@ -358,57 +400,100 @@ button:hover:not(:disabled) {
 }
 
 .rematch-btn {
-  background: #1f9d55;
+  background: var(--bo-go);
 }
 
-.rematch-btn:hover {
-  background: #17793f;
+.rematch-btn:hover:not(:disabled) {
+  background: var(--bo-go-deep);
 }
 
-.leave-link {
-  color: #7b8794;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.leave-link:hover {
-  text-decoration: underline;
-}
-
+/*
+ * Game controls. Everything in here — buttons and the labelled selects alike —
+ * is one pill of the same height on the same warm outline, so the row reads as
+ * one set of controls instead of a pile of different widgets. Actions sit on
+ * the left, settings on the right.
+ */
 .toolbar {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar-group--settings {
+  margin-left: auto;
 }
 
 .secondary-btn {
-  background: #e4e7eb;
-  color: #323f4b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line-strong);
+  color: var(--bo-ink-soft);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: var(--bo-sunk);
+  border-color: var(--bo-line-strong);
+  color: var(--bo-ink);
 }
 
 .toolbar-setup {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #e4e7eb;
-  border-radius: 8px;
-  padding: 0 10px;
-  font-size: 0.85rem;
-  color: #52606d;
-  font-weight: 600;
+  gap: 8px;
+  height: var(--bo-control-h);
+  background: var(--bo-surface);
+  border: 1px solid var(--bo-line-strong);
+  border-radius: var(--bo-radius);
+  padding: 0 10px 0 12px;
+  font-size: 0.82rem;
+  color: var(--bo-ink-faint);
+  font-weight: 700;
+}
+
+.toolbar-setup:focus-within {
+  border-color: var(--bo-accent);
+  box-shadow: 0 0 0 3px var(--bo-accent-wash);
 }
 
 .toolbar-setup select {
+  appearance: none;
+  -webkit-appearance: none;
   border: none;
-  background: transparent;
+  background: var(--bo-chevron) no-repeat right center / 11px 7px;
   font: inherit;
-  color: #323f4b;
-  padding: 8px 2px;
+  font-size: 0.88rem;
+  color: var(--bo-ink);
+  padding: 0 18px 0 0;
   cursor: pointer;
 }
 
-.secondary-btn:hover:not(:disabled) {
-  background: #cbd2d9;
+.toolbar-setup select:focus-visible {
+  outline: none;
+}
+
+@media (max-width: 560px) {
+  /* Once the row stacks, each group gets its own centred line: the
+     actions-left / settings-right split has nothing left to separate. */
+  .toolbar-group {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-group--settings {
+    margin-left: 0;
+  }
 }
 
 /* --- Modal --- */
@@ -450,7 +535,7 @@ button:hover:not(:disabled) {
 }
 
 .modal-panel {
-  background: white;
+  background: var(--bo-surface);
   border-radius: 16px;
   padding: 28px 24px;
   max-width: 420px;
@@ -470,7 +555,7 @@ button:hover:not(:disabled) {
   text-align: left;
   margin: 0 0 20px;
   padding-left: 20px;
-  color: #323f4b;
+  color: var(--bo-ink-soft);
   line-height: 1.6;
   display: flex;
   flex-direction: column;
@@ -478,7 +563,7 @@ button:hover:not(:disabled) {
 }
 
 .modal-close-btn {
-  background: #2f6bff;
+  background: var(--bo-accent);
 }
 
 /* --- Result popup --- */
@@ -511,19 +596,19 @@ button:hover:not(:disabled) {
 }
 
 .result-win .result-title {
-  color: #1f9d55;
+  color: var(--bo-go);
 }
 
 .result-lose .result-title {
-  color: #c0362c;
+  color: var(--bo-warn);
 }
 
 .result-draw .result-title {
-  color: #52606d;
+  color: var(--bo-ink-soft);
 }
 
 .result-subtitle {
-  color: #7b8794;
+  color: var(--bo-ink-faint);
   margin: 0 0 20px;
 }
 
@@ -556,7 +641,7 @@ button:hover:not(:disabled) {
 }
 
 .status-text--thinking {
-  color: #52606d;
+  color: var(--bo-ink-soft);
   animation: bo-thinking-dots 1.4s ease-in-out infinite;
 }
 

@@ -5,6 +5,7 @@ import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
+import PageBar from "../components/PageBar.js";
 import { requestAiMove } from "../lib/ai.js";
 
 /** The computer's first action of a turn lands no sooner than this; instant replies feel like a bug. */
@@ -142,7 +143,6 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
     resultTitle = "무승부";
   }
 
-  const levelInfo = AI_LEVELS.find((l) => l.id === level) ?? AI_LEVELS[1];
   let statusText = "";
   if (status.status === "ongoing") {
     statusText = thinking || turn === computer ? "컴퓨터가 생각하는 중..." : "당신의 차례입니다";
@@ -150,48 +150,52 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
 
   return (
     <div className="page">
-      <h1>{engine.meta.nameKo} · 컴퓨터와 대전</h1>
+      <PageBar title={engine.meta.nameKo} mode="컴퓨터와 대전" />
 
       <div className="toolbar">
-        <button className="secondary-btn" onClick={() => setShowRules(true)}>
-          규칙 보기
-        </button>
-        <SoundToggle />
-        <label className="toolbar-setup">
-          <span>난이도</span>
-          <select value={level} onChange={(e) => setLevel(e.target.value as AiLevel)} aria-label="컴퓨터 난이도">
-            {AI_LEVELS.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {setupOptions && (
+        <div className="toolbar-group">
+          <button className="secondary-btn" onClick={() => setShowRules(true)}>
+            규칙
+          </button>
+          <SoundToggle />
+          {status.status !== "ongoing" && resultDismissed && (
+            <button className="rematch-btn" onClick={() => startNewGame()}>
+              다시 하기
+            </button>
+          )}
+        </div>
+        <div className="toolbar-group toolbar-group--settings">
           <label className="toolbar-setup">
-            <span>배치</span>
-            <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
-              {setupOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
+            <span>난이도</span>
+            <select value={level} onChange={(e) => setLevel(e.target.value as AiLevel)} aria-label="컴퓨터 난이도">
+              {AI_LEVELS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
                 </option>
               ))}
             </select>
           </label>
-        )}
-        <button className="secondary-btn" onClick={handleSwapSides} title="새 판을 상대 색으로 시작합니다">
-          선후 바꾸기
-        </button>
-        {status.status !== "ongoing" && resultDismissed && (
-          <button className="rematch-btn" onClick={() => startNewGame()}>
-            처음부터 다시
+          {setupOptions && (
+            <label className="toolbar-setup">
+              <span>배치</span>
+              <select value={setupId} onChange={(e) => handleSetupChange(e.target.value)}>
+                {setupOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button className="secondary-btn" onClick={handleSwapSides} title="새 판을 상대 색으로 시작합니다">
+            선후 바꾸기
           </button>
-        )}
+        </div>
       </div>
 
       <p className="you-label">
         나는 <strong>{engine.meta.playerLabels[human]}</strong>, 컴퓨터는{" "}
-        <strong>{engine.meta.playerLabels[computer]}</strong> · {levelInfo.label} ({levelInfo.description})
+        <strong>{engine.meta.playerLabels[computer]}</strong>
       </p>
       {statusText && (
         <p className={`status-text${thinking ? " status-text--thinking" : ""}`} aria-live="polite">
@@ -210,10 +214,6 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
           you={human}
         />
       </div>
-
-      <Link to="/" className="leave-link">
-        홈으로
-      </Link>
 
       <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={gameId} />
       <ResultModal
