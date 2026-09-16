@@ -119,6 +119,8 @@ docker run -p 3001:3001 board-online
 
 ### 클라이언트와 서버를 따로 올리기 (Vercel + Render 등)
 
+Vercel의 Root Directory를 저장소 루트 또는 `packages/client`로 설정하는 경우를 모두 지원하도록 각 위치에 경로 설정을 두었습니다. `/local/*`, `/ai/*`, `/room/*` 직접 접속과 새로고침은 React 앱의 `index.html`로 연결됩니다. 두 `vercel.json`의 경로 규칙은 동일하게 유지하세요.
+
 정적 호스팅(Vercel 등)에 클라이언트만 올리면 **같은 화면 2인 플레이와 컴퓨터 대전은 그대로 동작**하지만,
 온라인 대전은 Socket.IO 서버가 있어야 합니다. 서버를 따로 올렸다면 클라이언트 빌드 시
 `VITE_SERVER_URL`에 그 주소를 넣으세요 (`packages/client/.env.example` 참고).
