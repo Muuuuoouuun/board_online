@@ -34,10 +34,10 @@ export function PieceDefs() {
     <defs>
       {/* Go-style stones (gomoku / reversi) */}
       <radialGradient id="bo-stone-black-grad" cx="35%" cy="28%" r="75%">
-        <stop offset="0%" stopColor="#5a6472" />
-        <stop offset="14%" stopColor="#262b34" />
-        <stop offset="55%" stopColor="#0c0e12" />
-        <stop offset="100%" stopColor="#000000" />
+        <stop offset="0%" stopColor="#666861" />
+        <stop offset="32%" stopColor="#383a33" />
+        <stop offset="72%" stopColor="#1c1e19" />
+        <stop offset="100%" stopColor="#10120f" />
       </radialGradient>
       <radialGradient id="bo-stone-white-grad" cx="35%" cy="28%" r="78%">
         <stop offset="0%" stopColor="#ffffff" />
@@ -68,22 +68,24 @@ export function PieceDefs() {
       </linearGradient>
 
       {/* Chess pieces */}
-      <linearGradient id="bo-chess-white-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#fffaf0" />
-        <stop offset="55%" stopColor="#eee2c6" />
-        <stop offset="100%" stopColor="#d3c3a0" />
+      <linearGradient id="bo-chess-white-grad" x1="0%" y1="10%" x2="100%" y2="65%">
+        <stop offset="0%" stopColor="#c8b78f" />
+        <stop offset="32%" stopColor="#fffbed" />
+        <stop offset="60%" stopColor="#f1e7cd" />
+        <stop offset="100%" stopColor="#c1aa7e" />
       </linearGradient>
-      <linearGradient id="bo-chess-black-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#54545c" />
-        <stop offset="55%" stopColor="#2c2c31" />
-        <stop offset="100%" stopColor="#131316" />
+      <linearGradient id="bo-chess-black-grad" x1="0%" y1="10%" x2="100%" y2="65%">
+        <stop offset="0%" stopColor="#20261f" />
+        <stop offset="32%" stopColor="#606959" />
+        <stop offset="65%" stopColor="#303a2c" />
+        <stop offset="100%" stopColor="#171d16" />
       </linearGradient>
 
       {/* Janggi wooden tile */}
       <radialGradient id="bo-wood-grad" cx="38%" cy="30%" r="78%">
-        <stop offset="0%" stopColor="#f3dfae" />
-        <stop offset="45%" stopColor="#dcb877" />
-        <stop offset="100%" stopColor="#a5702f" />
+        <stop offset="0%" stopColor="#fffdf0" />
+        <stop offset="45%" stopColor="#f4ecd5" />
+        <stop offset="100%" stopColor="#dfceaa" />
       </radialGradient>
     </defs>
   );
@@ -128,10 +130,11 @@ function GoStone({ owner, cx, cy, size }: { owner: 0 | 1; cx: number; cy: number
   const isBlack = owner === 0;
   const grad = isBlack ? "url(#bo-stone-black-grad)" : "url(#bo-stone-white-grad)";
   const rim = isBlack ? "#000000" : "#9a8f74";
-  const hlOpacity = isBlack ? 0.5 : 0.85;
+  const hlOpacity = isBlack ? 0.07 : 0.18;
   return (
     <g pointerEvents="none">
       <ellipse cx={cx} cy={cy + r * 0.58} rx={r * 0.92} ry={r * 0.3} fill="url(#bo-shadow-grad)" />
+      <circle cx={cx + 0.6} cy={cy + 2} r={r} fill="#29251c" opacity=".22" />
       <circle cx={cx} cy={cy} r={r} fill={grad} stroke={rim} strokeWidth={size * 0.02} />
       <ellipse
         cx={cx - r * 0.32}
@@ -211,201 +214,76 @@ function CheckerDisc({
 /* Chess pieces — original silhouettes, built from primitive shapes    */
 /* ------------------------------------------------------------------ */
 
-function ChessPiece({
-  glyph,
-  owner,
-  cx,
-  cy,
-  size,
-}: {
-  glyph: string;
-  owner: 0 | 1;
-  cx: number;
-  cy: number;
-  size: number;
-}) {
-  const isWhite = owner === 0;
-  const fill = isWhite ? "url(#bo-chess-white-grad)" : "url(#bo-chess-black-grad)";
-  const stroke = isWhite ? "#2b2620" : "#d8d2c2";
-  const accent = isWhite ? "#8a7d5f" : "#4a4a52";
-  const scale = size / BASE_CELL;
-  const sw = 1.5;
+function ChessPiece({ glyph, owner, cx, cy, size }: Omit<PieceArtProps, "game">) {
+  const white = owner === 0;
+  const fill = `url(#bo-chess-${white ? "white" : "black"}-grad)`;
+  const edge = white ? "#776549" : "#181b16";
+  const detail = white ? "#ad9872" : "#899080";
+  const pawn = glyph === "♟";
 
   return (
-    <g transform={`translate(${cx} ${cy}) scale(${scale})`} pointerEvents="none">
-      <ellipse cx={0} cy={17} rx={13} ry={3.4} fill="rgba(0,0,0,0.28)" />
-      <g fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round">
-        {glyph === "♟" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-8,13 8,13 5.5,2 -5.5,2" />
-            <rect x={-3.2} y={-2} width={6.4} height={4.2} rx={1.6} />
-            <circle cx={0} cy={-8.5} r={6.2} />
-          </>
-        )}
-
-        {glyph === "♜" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-9,13 9,13 7.5,-6 -7.5,-6" />
-            <rect x={-9.5} y={-8.5} width={19} height={3} rx={1} />
-            <rect x={-8.5} y={-15} width={4.6} height={7} />
-            <rect x={-2.3} y={-15} width={4.6} height={7} />
-            <rect x={3.9} y={-15} width={4.6} height={7} />
-          </>
-        )}
-
-        {glyph === "♝" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-10,13 10,13 8,7 -8,7" />
-            <path d="M 0 -18 C 8 -14 9 -3 6.2 4.5 C 9.5 6 10.5 9.5 10.5 13 L -10.5 13 C -10.5 9.5 -9.5 6 -6.2 4.5 C -9 -3 -8 -14 0 -18 Z" />
-            <line
-              x1={-3}
-              y1={-13.5}
-              x2={2.6}
-              y2={-8.5}
-              stroke={accent}
-              strokeWidth={1.6}
-              strokeLinecap="round"
-            />
-            <circle cx={0} cy={-19.5} r={2.3} />
-          </>
-        )}
-
-        {glyph === "♞" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-10.5,13 10.5,13 10.5,3.5 -10.5,3.5" />
-            <path d="M -8.5 3.5 C -9.5 -3 -6.5 -8.5 -0.5 -11.5 C -3 -13.5 -3.2 -16.5 -0.8 -18.3 C 1.8 -19.8 5 -17.6 4.6 -14.6 C 8 -14.3 11.2 -11.8 12.4 -8.4 C 13.2 -6.1 12.2 -4.3 10 -3.4 C 11 -1.6 10.8 0.5 9 1.6 L 9 3.5 Z" />
-            <polygon points="0.4,-18 3.2,-21.6 4.4,-17.6" />
-            <circle cx={4.4} cy={-11.3} r={1.15} fill={stroke} stroke="none" />
-            <path
-              d="M -4.5 -9.5 L -1 -12 M -3 -6 L 0.2 -8.6 M -1.8 -2.6 L 1.6 -5.2"
-              stroke={accent}
-              strokeWidth={1.3}
-              strokeLinecap="round"
-              fill="none"
-            />
-          </>
-        )}
-
-        {glyph === "♛" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-9,13 9,13 7,-2.5 -7,-2.5" />
-            <rect x={-9} y={-7} width={18} height={4.5} rx={1} />
-            <circle cx={-8} cy={-10} r={2.1} />
-            <circle cx={-4} cy={-12.5} r={2.1} />
-            <circle cx={0} cy={-14.5} r={2.3} />
-            <circle cx={4} cy={-12.5} r={2.1} />
-            <circle cx={8} cy={-10} r={2.1} />
-          </>
-        )}
-
-        {glyph === "♚" && (
-          <>
-            <rect x={-13} y={13} width={26} height={4.5} rx={1.5} />
-            <polygon points="-9,13 9,13 7,-2.5 -7,-2.5" />
-            <rect x={-9} y={-7} width={18} height={4.5} rx={1} />
-            <rect x={-1.6} y={-18} width={3.2} height={9} />
-            <rect x={-4.5} y={-15} width={9} height={3.2} />
-          </>
-        )}
+    <g transform={`translate(${cx} ${cy}) scale(${size / BASE_CELL})`} pointerEvents="none">
+      <ellipse cy="18" rx={pawn ? 12 : 16} ry="3.2" fill="url(#bo-shadow-grad)" />
+      <g fill={fill} stroke={edge} strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round">
+        {pawn && <>
+          <path d="M-9 12 Q-3 6-4-1 H4 Q3 6 9 12Z" />
+          <path d="M-6-2 Q0-4 6-2 L5 1 H-5Z" />
+          <circle cy="-8" r="5.8" />
+        </>}
+        {glyph === "♜" && <>
+          <path d="M-11 12 L-7 7-7-6 H7 L7 7 11 12Z" />
+          <path d="M-10-6 V-16 H-6 V-12 H-2 V-16 H2 V-12 H6 V-16 H10 V-6Z" />
+          <path d="M-7-4 H7 M-8 8 H8" fill="none" stroke={detail} />
+        </>}
+        {glyph === "♝" && <>
+          <path d="M-11 12 Q-4 8-4 1 H4 Q4 8 11 12Z" />
+          <path d="M0-18 C-4-14-8-11-7-6 Q-6-1 0 0 Q6-1 7-6 C8-11 4-14 0-18Z" />
+          <circle cy="-18" r="1.7" />
+          <path d="M2-13 L-2-7" fill="none" stroke={detail} strokeWidth="2" />
+          <path d="M-6 2 H6" fill="none" stroke={detail} />
+        </>}
+        {glyph === "♞" && <>
+          <path d="M-12 12 C-11 6-10 3-6 0 L-1-5-6-4-10-1-14-4-11-10-5-15-4-20 0-17 3-18 C13-13 12 0 9 6 L12 12Z" />
+          <path d="M3-13 C8-9 8-1 5 5 M-5-13 L-9-8" fill="none" stroke={detail} strokeWidth="1.4" />
+          <circle cx="-4" cy="-10" r="1.2" fill={edge} stroke="none" />
+          <path d="M-12-4 L-9-5" stroke={detail} />
+        </>}
+        {glyph === "♛" && <>
+          <path d="M-12 12 Q-5 6-6-1 H6 Q5 6 12 12Z" />
+          <path d="M-7-2 L-12-15-6-10-4-18 0-11 4-18 6-10 12-15 7-2Z" />
+          {[[-12,-16],[-4,-19],[4,-19],[12,-16]].map(([x,y]) => <circle key={x} cx={x} cy={y} r="1.7" />)}
+          <path d="M-7-2 Q0 0 7-2 M-6 2 H6" fill="none" stroke={detail} />
+        </>}
+        {glyph === "♚" && <>
+          <path d="M-12 12 Q-5 7-6-1 H6 Q5 7 12 12Z" />
+          <path d="M-6-1 L-9-8 Q-8-13-3-11 H3 Q8-13 9-8 L6-1Z" />
+          <path d="M-1.7-11 V-15 H-5 V-18 H-1.7 V-21 H1.7 V-18 H5 V-15 H1.7 V-11Z" />
+          <path d="M-6 1 H6 M-5-7 Q0-5 5-7" fill="none" stroke={detail} />
+        </>}
+        <path d={pawn ? "M-9 11 Q0 9 9 11 L11 15 H-11Z" : "M-12 11 Q0 9 12 11 L14 15 H-14Z"} />
+        <path d={pawn ? "M-11 15 H11 L12 18 H-12Z" : "M-14 15 H14 L15 18 H-15Z"} />
+        <path d={pawn ? "M-8 13 H7" : "M-11 13 H10"} stroke={white ? "#fffdf4" : "#a4aa99"} opacity=".65" />
       </g>
     </g>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Janggi octagonal wooden tiles                                       */
-/* ------------------------------------------------------------------ */
-
+/* Layered ivory octagons: rank is expressed by size, team by engraved ink. */
 const JANGGI_RANK_SCALE: Record<string, number> = {
-  楚: 1.18,
-  漢: 1.18,
-  車: 1.06,
-  包: 1.06,
-  馬: 1.0,
-  象: 1.0,
-  士: 0.9,
-  卒: 0.86,
-  兵: 0.86,
+  楚: 1.12, 漢: 1.12, 車: 1.04, 包: 1.04, 馬: 1, 象: 1, 士: .92, 卒: .9, 兵: .9,
 };
 
-function JanggiTile({
-  glyph,
-  owner,
-  cx,
-  cy,
-  size,
-  highlight,
-}: {
-  glyph: string;
-  owner: 0 | 1;
-  cx: number;
-  cy: number;
-  size: number;
-  highlight: boolean;
-}) {
-  const rankScale = JANGGI_RANK_SCALE[glyph] ?? 1.0;
-  const r = size * 0.42 * rankScale;
-  const elongate = 1.12;
-  const ringStroke = highlight ? "#8a5a1f" : "#5b3a1e";
-  const ringWidth = highlight ? size * 0.06 : size * 0.035;
-  const textFill = owner === 0 ? "#0b6e4f" : "#b3261e";
-  const fontSize = size * 0.44 * rankScale;
-
+function JanggiTile({ glyph, owner, cx, cy, size }: Omit<PieceArtProps, "game">) {
+  const r = size * .43 * (JANGGI_RANK_SCALE[glyph] ?? 1);
+  const ink = owner === 0 ? "#146448" : "#af352c";
   return (
     <g pointerEvents="none">
-      <ellipse cx={cx} cy={cy + r * 0.62} rx={r * 0.95} ry={r * 0.26} fill="url(#bo-shadow-grad)" />
-      {highlight && (
-        <polygon
-          points={octagonPoints(cx, cy, r * 1.16, elongate)}
-          fill="none"
-          stroke="#c9a227"
-          strokeWidth={size * 0.03}
-          opacity={0.75}
-        />
-      )}
-      <polygon
-        points={octagonPoints(cx, cy, r, elongate)}
-        fill="url(#bo-wood-grad)"
-        stroke={ringStroke}
-        strokeWidth={ringWidth}
-        strokeLinejoin="round"
-      />
-      <polygon
-        points={octagonPoints(cx, cy, r * 0.76, elongate)}
-        fill="none"
-        stroke="#6b4423"
-        strokeWidth={size * 0.018}
-        opacity={0.55}
-      />
-      <text
-        x={cx}
-        y={cy + fontSize * 0.02}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={fontSize}
-        fontWeight="bold"
-        fontFamily="'Noto Sans KR', sans-serif"
-        fill="#3a2a16"
-        opacity={0.35}
-        transform={`translate(${size * 0.02} ${size * 0.03})`}
-      >
-        {glyph}
-      </text>
-      <text
-        x={cx}
-        y={cy + fontSize * 0.02}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={fontSize}
-        fontWeight="bold"
-        fontFamily="'Noto Sans KR', sans-serif"
-        fill={textFill}
-      >
+      <ellipse cx={cx + 1} cy={cy + r * .8} rx={r} ry={r * .35} fill="url(#bo-shadow-grad)" />
+      <polygon points={octagonPoints(cx, cy + size * .065, r, 1)} fill="#bba17b" stroke="#846e4e" strokeWidth=".7" strokeLinejoin="round" />
+      <polygon points={octagonPoints(cx, cy, r, 1)} fill="url(#bo-wood-grad)" stroke="#fff8e4" strokeWidth="1.1" strokeLinejoin="round" />
+      <polygon points={octagonPoints(cx, cy, r * .86, 1)} fill="none" stroke={ink} strokeWidth={size * .015} opacity=".55" strokeLinejoin="round" />
+      <text x={cx} y={cy + r * .04} textAnchor="middle" dominantBaseline="central"
+        fontSize={r * 1.22} fontWeight="700" fontFamily="'Noto Serif KR', 'Songti SC', serif" fill={ink}>
         {glyph}
       </text>
     </g>
@@ -420,6 +298,7 @@ export default function PieceArt(props: PieceArtProps) {
   const { game, owner, glyph, highlight, cx, cy, size } = props;
 
   switch (game) {
+    case "gonu":
     case "gomoku":
     case "reversi":
       return <GoStone owner={owner} cx={cx} cy={cy} size={size} />;

@@ -130,6 +130,33 @@ export const gomokuEngine: GameEngine<GomokuState> = {
     return { ok: true, state: nextState, status: { status, winner, reason } };
   },
 
+  feedback(state) {
+    if (state.status !== "win" || state.winner === null) return null;
+    const positions: { x: number; y: number }[] = [];
+    const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    const seen = new Set<string>();
+    for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
+      if (state.board[y][x] !== state.winner) continue;
+      for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+        if (state.board[y - dy]?.[x - dx] === state.winner) continue;
+        const run = [{ x, y }];
+        let cx = x + dx, cy = y + dy;
+        while (state.board[cy]?.[cx] === state.winner) {
+          run.push({ x: cx, y: cy });
+          cx += dx; cy += dy;
+        }
+        if (run.length < WIN_LEN) continue;
+        const end = run[run.length - 1];
+        lines.push({ x1: x, y1: y, x2: end.x, y2: end.y });
+        for (const pos of run) {
+          const key = `${pos.x},${pos.y}`;
+          if (!seen.has(key)) { positions.push(pos); seen.add(key); }
+        }
+      }
+    }
+    return { kind: "win", label: "오목 완성", positions, lines };
+  },
+
   pieces(state): BoardPiece[] {
     const out: BoardPiece[] = [];
     for (let y = 0; y < SIZE; y++) {

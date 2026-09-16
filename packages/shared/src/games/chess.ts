@@ -103,6 +103,18 @@ export const chessEngine: GameEngine<ChessState> = {
     return { ok: true, state: nextState, status: statusResult };
   },
 
+  feedback(state) {
+    if (state.status === "draw") return null;
+    const chess = new Chess(state.fen);
+    if (!chess.isCheck()) return null;
+    const king = chess.board().flat().find((piece) => piece?.type === "k" && piece.color === chess.turn());
+    return king ? {
+      kind: chess.isCheckmate() ? "win" : "check",
+      label: chess.isCheckmate() ? "체크메이트" : "체크",
+      positions: [sqToPos(king.square)],
+    } : null;
+  },
+
   pieces(state): BoardPiece[] {
     const chess = new Chess(state.fen);
     const board = chess.board();

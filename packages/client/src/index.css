@@ -2,34 +2,32 @@
  * Design tokens.
  *
  * The palette is taken from the material the games are actually made of:
- * paper and pale wood for the ground, ink for text, and 쪽빛 indigo — the
- * traditional Korean dye — for anything you can act on. Indigo rather than a
- * screen blue because it has to sit next to nine wooden boards without
- * shouting over them, and because the board surfaces themselves already own
- * the warm end of the palette.
+ * paper and pale wood for the ground, charcoal ink, and forest olive controls.
+ * Photographic grain lives beneath the board's state-driven SVG artwork.
  */
 :root {
   --bo-ground: #f5f3ee;
   --bo-surface: #fffdf8;
-  --bo-sunk: #f7f1e3;
-  --bo-line: #e6dcc4;
-  --bo-line-strong: #d3c3a0;
+  --bo-sunk: #efede6;
+  --bo-line: #dedbd2;
+  --bo-line-strong: #c4c1b6;
 
-  --bo-ink: #241d15;
-  /* Both secondary inks clear 4.5:1 on every surface here: 7.9:1 and 4.7:1. */
-  --bo-ink-soft: #5d4d39;
-  --bo-ink-faint: #786a52;
+  --bo-ink: #292820;
+  /* Secondary inks retain readable contrast on the paper and panel surfaces. */
+  --bo-ink-soft: #55564c;
+  --bo-ink-faint: #6b6d62;
 
-  --bo-accent: #2e4a86;
-  --bo-accent-deep: #22386a;
-  --bo-accent-wash: rgba(46, 74, 134, 0.1);
+  --bo-accent: #3d5141;
+  --bo-accent-deep: #2d4031;
+  --bo-accent-wash: rgba(61, 81, 65, 0.1);
 
   --bo-go: #1f7a4d;
   --bo-go-deep: #17603c;
   --bo-warn: #b3261e;
 
-  --bo-radius: 10px;
-  --bo-radius-lg: 16px;
+  --bo-radius: 6px;
+  --bo-radius-lg: 12px;
+  --bo-serif: "Noto Serif KR", "AppleMyungjo", "Batang", Georgia, serif;
   /* One height for every button, select and chip that sits in a control row. */
   --bo-control-h: 38px;
 
@@ -60,7 +58,31 @@ body {
   font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bo-ground);
   color: var(--bo-ink);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* A fine, low-opacity paper tooth without another blocking image request. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: .15;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath filter='url(%23n)' opacity='.28' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
+}
+
+select { appearance: none; font: inherit; font-size: 14px; color: var(--bo-ink); border: 1px solid var(--bo-line-strong); border-radius: 5px; padding: 7px 30px 7px 12px; background: var(--bo-chevron) no-repeat right 10px center / 11px 7px, var(--bo-surface); cursor: pointer; }
+.site-header { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bo-line-strong); gap: 20px; }
+.site-brand { display: inline-flex; gap: 14px; align-items: center; text-decoration: none; color: var(--bo-ink); font-family: var(--bo-serif); font-size: 25px; font-weight: 600; letter-spacing: -.05em; white-space: nowrap; }
+.site-brand-mark { display: grid; grid-template-columns: repeat(2, 11px); gap: 3px; }
+.site-brand-mark i { width: 11px; height: 11px; background: var(--bo-accent); border-radius: 3px; box-shadow: inset 0 1px 1px #ffffff25; }
+.site-brand-mark i:nth-child(2) { opacity: .75; }
+.site-header nav { display: flex; align-items: center; gap: 25px; font-size: 14px; }
+.site-header nav > span { font-size: 12px; color: var(--bo-ink-faint); padding-right: 25px; border-right: 1px solid var(--bo-line-strong); }
+.site-header nav a { color: var(--bo-ink); text-decoration: none; }
+.site-header nav a:hover { color: var(--bo-accent); text-decoration: underline; text-underline-offset: 5px; }
+@media (max-width: 740px) { .site-header { height: 68px; } .site-brand { font-size: 21px; gap: 10px; } .site-header nav > span { display: none; } .site-header nav { font-size: 12px; } }
 
 /* One focus treatment for the whole app, so keyboard users get the same
    affordance on links, buttons and selects alike. */

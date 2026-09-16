@@ -165,6 +165,7 @@ export default function TerritoryBoard({ state, legalMoves, onMove, interactive,
           onPointerMove={handleRootMove}
         >
           <rect x={0} y={0} width={boardW} height={boardH} rx={8} fill={WOOD} pointerEvents="none" />
+          <image href="/art/ash-wood.webp" x={0} y={0} width={boardW} height={boardH} opacity=".35" preserveAspectRatio="none" pointerEvents="none" />
           <rect
             x={FRAME - 2}
             y={FRAME - 2}

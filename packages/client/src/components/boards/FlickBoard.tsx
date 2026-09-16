@@ -194,6 +194,7 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
 
         <rect x={0} y={0} width={VB} height={VB} rx={2} fill="url(#fb-frame)" />
         <rect x={FRAME} y={FRAME} width={SIZE} height={SIZE} fill={CREAM} />
+        <image href="/art/ash-wood.webp" x={FRAME} y={FRAME} width={SIZE} height={SIZE} opacity=".12" preserveAspectRatio="none" pointerEvents="none" />
 
         <path d={p0Path} fill={PLAYER_COLORS[0]} fillOpacity={0.82} pointerEvents="none" />
         <path d={p1Path} fill={PLAYER_COLORS[1]} fillOpacity={0.82} pointerEvents="none" />

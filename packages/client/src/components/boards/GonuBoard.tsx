@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 // Board geometry comes from the engine so the renderer and the rules cannot drift.
 import {
-  EDGES,
+  GONU_LINES,
   POINT_IDS,
   POINTS,
   posEq,
@@ -12,9 +12,10 @@ import {
 } from "@board-online/shared";
 import type { GameViewProps } from "./types.js";
 import { playSound } from "../../lib/sound.js";
+import PieceArt, { PieceDefs } from "../PieceArt.js";
 
-const CELL = 96;
-const FRAME = 44;
+const CELL = 100;
+const FRAME = 60;
 const PAD = 14;
 const SIZE = FRAME * 2 + CELL * 2;
 
@@ -26,20 +27,27 @@ function posKey(p: Pos): string {
   return `${p.x},${p.y}`;
 }
 
-/** Each undirected edge once, as board-coordinate endpoints, for drawing. */
-const LINE_SEGMENTS: { a: Pos; b: Pos }[] = (() => {
-  const seen = new Set<string>();
-  const out: { a: Pos; b: Pos }[] = [];
-  for (const id of POINT_IDS) {
-    for (const n of EDGES[id]) {
-      const key = [id, n].sort().join("-");
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push({ a: POINTS[id], b: POINTS[n] });
-    }
-  }
-  return out;
-})();
+const POINT_LABELS: Record<PointId, string> = {
+  TL: "왼쪽 위", TR: "오른쪽 위", BR: "오른쪽 아래", BL: "왼쪽 아래", C: "가운데",
+};
+
+/** Lobby preview uses the engine's geometry and actual opening position. */
+export function GonuPreview() {
+  return <svg viewBox="0 0 400 200" width="100%" height="100%" aria-hidden="true">
+    <image href="/art/ash-wood.webp" width="400" height="200" preserveAspectRatio="xMidYMid slice" />
+    <g transform="translate(130 30) scale(.7)" stroke="#614d31" strokeWidth="3" strokeLinecap="round">
+      {GONU_LINES.map((line, i) => <line key={i} x1={line.x1 * 100} y1={line.y1 * 100} x2={line.x2 * 100} y2={line.y2 * 100} />)}
+      <circle cx="100" cy="100" r="3" fill="#614d31" />
+      {[0,200].map(x => <g key={x}>
+        <circle cx={x+2} cy="3" r="24" fill="#5d4b30" opacity=".2" stroke="none" />
+        <circle cx={x} cy="0" r="24" fill="#fff9e9" stroke="#c1b18f" strokeWidth="1.5" />
+        <circle cx={x+2} cy="203" r="24" fill="#5d4b30" opacity=".2" stroke="none" />
+        <circle cx={x} cy="200" r="24" fill="#30372b" stroke="#172015" strokeWidth="1.5" />
+      </g>)}
+    </g>
+    <text x="130" y="102" textAnchor="middle" fill="#715e43" fontSize="12" fontFamily="'Noto Serif KR', serif">우물</text>
+  </svg>;
+}
 
 export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
   const { state, legalMoves, onMove, interactive } = props;
@@ -75,6 +83,10 @@ export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
   function handlePointClick(pos: Pos) {
     if (!interactive) return;
     if (selected) {
+      if (posEq(selected, pos)) {
+        setSelected(null);
+        return;
+      }
       const move = legalMoves.find((m) => m.from && posEq(m.from, selected) && posEq(m.to, pos));
       if (move) {
         playSound("move");
@@ -100,45 +112,21 @@ export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
 
   return (
     <svg className="board-svg" viewBox={`0 0 ${SIZE} ${SIZE}`} role="group" aria-label="고누 보드">
-        <defs>
-          <radialGradient id="gonu-stone-dark" cx="35%" cy="28%" r="75%">
-            <stop offset="0%" stopColor="#5a6472" />
-            <stop offset="16%" stopColor="#262b34" />
-            <stop offset="55%" stopColor="#0c0e12" />
-            <stop offset="100%" stopColor="#000000" />
-          </radialGradient>
-          <radialGradient id="gonu-stone-light" cx="35%" cy="28%" r="78%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="35%" stopColor="#f6f1e4" />
-            <stop offset="72%" stopColor="#e2d7bd" />
-            <stop offset="100%" stopColor="#c6b995" />
-          </radialGradient>
-        </defs>
-
-        <rect x={0} y={0} width={SIZE} height={SIZE} rx={10} fill="#8a6234" />
-        <rect x={PAD} y={PAD} width={SIZE - PAD * 2} height={SIZE - PAD * 2} rx={6} fill="#dfb579" />
-
-        {/*
-          The left side has no line: that gap is the 우물 (well), which stones may
-          never cross. It is left unlabelled because the rotated caption did not fit
-          the frame; the rules modal explains it.
-        */}
-        {LINE_SEGMENTS.map(({ a, b }, i) => {
-          const pa = toPx(a);
-          const pb = toPx(b);
-          return (
-            <line
-              key={`edge-${i}`}
-              x1={pa.cx}
-              y1={pa.cy}
-              x2={pb.cx}
-              y2={pb.cy}
-              stroke="#3a2f28"
-              strokeWidth={4}
-              strokeLinecap="round"
-            />
-          );
+        <PieceDefs />
+        <rect width={SIZE} height={SIZE} rx={12} fill="#997c53" />
+        <rect x={3} y={3} width={SIZE-6} height={SIZE-6} rx={10} fill="#d7bb8d" stroke="#eddbb5" />
+        <rect x={PAD} y={PAD} width={SIZE - PAD * 2} height={SIZE - PAD * 2} rx={5} fill="#dfc397" />
+        <image href="/art/ash-wood.webp" x={PAD} y={PAD} width={SIZE - PAD * 2} height={SIZE - PAD * 2} preserveAspectRatio="none" pointerEvents="none" />
+        <rect x={PAD} y={PAD} width={SIZE - PAD * 2} height={SIZE - PAD * 2} rx={5} fill="none" stroke="#917249" strokeOpacity=".45" />
+        {GONU_LINES.map((line, i) => {
+          const a = toPx({ x: line.x1, y: line.y1 });
+          const b = toPx({ x: line.x2, y: line.y2 });
+          return <line key={i} x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy} stroke="#604c30" strokeWidth={2.6} strokeLinecap="round" />;
         })}
+        <g pointerEvents="none" fill="#756347" textAnchor="middle">
+          <text x={FRAME} y={SIZE/2 - 3} fontFamily="'Noto Serif KR', serif" fontSize="15">우물</text>
+          <text x={FRAME} y={SIZE/2 + 15} fontSize="8.5" letterSpacing="1">건널 수 없어요</text>
+        </g>
 
         {POINT_IDS.map((id) => {
           const { cx, cy } = toPx(POINTS[id]);
@@ -151,7 +139,8 @@ export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
           const { cx, cy } = toPx(pos);
           const key = posKey(pos);
           const legal = interactive && destinationKeys.has(key);
-          const selectable = interactive && !selected && selectablePieces.some((p) => posKey(p) === key);
+          const canSelect = interactive && selectablePieces.some((p) => posKey(p) === key);
+          const selectable = canSelect && !selected;
           const classes = ["board-hit"];
           if (legal) classes.push("board-hit--legal");
           if (selectable) classes.push("board-hit--selectable");
@@ -159,13 +148,24 @@ export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
             <circle
               key={`hit-${id}`}
               data-pos={key}
+              role="button"
+              aria-label={`${POINT_LABELS[id]}${state.board[id] === null ? " 빈 자리" : state.board[id] === 0 ? " 흑돌" : " 백돌"}${legal ? ", 이동 가능" : selectable ? ", 선택 가능" : ""}`}
+              aria-disabled={!legal && !canSelect}
+              aria-pressed={state.board[id] !== null ? !!selected && posEq(selected, pos) : undefined}
+              tabIndex={legal || canSelect ? 0 : -1}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handlePointClick(pos);
+                }
+              }}
               className={classes.join(" ")}
               cx={cx}
               cy={cy}
               r={CELL * 0.42}
               fill="transparent"
               onClick={() => handlePointClick(pos)}
-              style={{ cursor: interactive ? "pointer" : "default" }}
+              style={{ cursor: legal || canSelect ? "pointer" : "default" }}
             />
           );
         })}
@@ -194,21 +194,14 @@ export default function GonuBoard(props: GameViewProps<GonuState, Move>) {
         {/* stones */}
         {stones.map(({ id, pos, owner }) => {
           const { cx, cy } = toPx(pos);
-          const r = CELL * 0.24;
-          return (
-            <g key={`stone-${id}`} pointerEvents="none">
-              <circle cx={cx + 1.5} cy={cy + 2.5} r={r} fill="rgba(0,0,0,0.28)" />
-              <circle
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill={owner === 0 ? "url(#gonu-stone-dark)" : "url(#gonu-stone-light)"}
-                stroke={owner === 0 ? "#000000" : "#a89568"}
-                strokeWidth={1}
-              />
-            </g>
-          );
+          return <PieceArt key={id} game="gonu" owner={owner} glyph="" cx={cx} cy={cy} size={60} />;
         })}
+        {state.status === "win" && <g className="board-feedback board-feedback--win" pointerEvents="none" aria-label="승리한 돌">
+          {stones.filter(stone => stone.owner === state.winner).map(({ id, pos }) => {
+            const { cx, cy } = toPx(pos);
+            return <circle key={id} className="board-feedback-ring" cx={cx} cy={cy} r={30} />;
+          })}
+        </g>}
     </svg>
   );
 }
