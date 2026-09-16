@@ -11,9 +11,9 @@ const CREAM = "#f5f3ee";
 const WOOD = "#dfb579";
 const WOOD_LINE = "rgba(107, 74, 51, 0.32)";
 const WOOD_EDGE = "#8a6234";
-const P0_COLOR = "#2f6bff"; // player 0 — blue
+const P0_COLOR = "var(--bo-player-0)"; // player 0 — blue
 const P0_DARK = "#1f52d1";
-const P1_COLOR = "#e0563f"; // player 1 — warm red-orange
+const P1_COLOR = "var(--bo-player-1)"; // player 1 — warm red-orange
 const P1_DARK = "#b8402c";
 const PATH_ACCENT = "#ffd24c";
 

@@ -5,6 +5,7 @@
  * paper and pale wood for the ground, charcoal ink, and forest olive controls.
  * Photographic grain lives beneath the board's state-driven SVG artwork.
  */
+
 :root {
   --bo-ground: #f5f3ee;
   --bo-surface: #fffdf8;
@@ -25,11 +26,43 @@
   --bo-go-deep: #17603c;
   --bo-warn: #b3261e;
 
+  /*
+   * Type. Six steps, each a step you can actually see — the stylesheets had
+   * grown nineteen sizes, twelve of them inside a 4px band, which is a ladder
+   * with no rungs. Korean text carries less of its weight in x-height than
+   * Latin does, so the small end stops at 12.5px rather than going lower.
+   */
+  --bo-text-xs: 0.78rem;
+  --bo-text-sm: 0.875rem;
+  --bo-text-md: 0.95rem;
+  --bo-text-base: 1.05rem;
+  --bo-text-lg: 1.15rem;
+  --bo-text-xl: 1.35rem;
+  --bo-text-2xl: 1.6rem;
+
+  /* Space. A 4px ladder; everything between rungs was an eyeballed value. */
+  --bo-space-1: 4px;
+  --bo-space-2: 8px;
+  --bo-space-3: 12px;
+  --bo-space-4: 16px;
+  --bo-space-5: 20px;
+  --bo-space-6: 24px;
+  --bo-space-8: 32px;
+  --bo-space-12: 48px;
+
+  --bo-radius-sm: 4px;
   --bo-radius: 6px;
   --bo-radius-lg: 12px;
   --bo-serif: "Noto Serif KR", "AppleMyungjo", "Batang", Georgia, serif;
-  /* One height for every button, select and chip that sits in a control row. */
+  /* The height of a control that stands on its own — a toolbar button, a
+     labelled select, a lobby card's action. The -sm step is for controls that
+     sit inside another one (the room code's copy button, a card's setup
+     select) or that are navigation rather than action (the back link). */
   --bo-control-h: 38px;
+  --bo-control-h-sm: 32px;
+  /* The board's width. Every piece of game-page chrome shares this column so
+     the controls line up with the board instead of the wider page. */
+  --bo-column: 560px;
 
   --bo-shadow-sm: 0 1px 2px rgba(90, 66, 32, 0.08);
   --bo-shadow-md: 0 4px 14px rgba(90, 66, 32, 0.1);
@@ -41,8 +74,16 @@
    */
   --bo-board-focus: #2f6bff;
 
+  /*
+   * The two players, wherever a game needs to tell them apart by colour rather
+   * than by piece: 땅따먹기's territories, its stones, the lobby motifs for both.
+   * One pair, so the same player is the same colour on every screen.
+   */
+  --bo-player-0: #2f6bff;
+  --bo-player-1: #d4622a;
+
   /* Chevron for every custom-styled <select>, tinted to match the ink. */
-  --bo-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.4 1.6 6 6.2l4.6-4.6' fill='none' stroke='%235d4d39' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --bo-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.4 1.6 6 6.2l4.6-4.6' fill='none' stroke='%2355564c' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * {
@@ -62,6 +103,7 @@ body {
 }
 
 /* A fine, low-opacity paper tooth without another blocking image request. */
+
 body::before {
   content: "";
   position: fixed;
@@ -73,19 +115,38 @@ body::before {
 }
 
 select { appearance: none; font: inherit; font-size: 14px; color: var(--bo-ink); border: 1px solid var(--bo-line-strong); border-radius: 5px; padding: 7px 30px 7px 12px; background: var(--bo-chevron) no-repeat right 10px center / 11px 7px, var(--bo-surface); cursor: pointer; }
+
 .site-header { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bo-line-strong); gap: 20px; }
+
 .site-brand { display: inline-flex; gap: 14px; align-items: center; text-decoration: none; color: var(--bo-ink); font-family: var(--bo-serif); font-size: 25px; font-weight: 600; letter-spacing: -.05em; white-space: nowrap; }
+
 .site-brand-mark { display: grid; grid-template-columns: repeat(2, 11px); gap: 3px; }
+
 .site-brand-mark i { width: 11px; height: 11px; background: var(--bo-accent); border-radius: 3px; box-shadow: inset 0 1px 1px #ffffff25; }
+
 .site-brand-mark i:nth-child(2) { opacity: .75; }
+
 .site-header nav { display: flex; align-items: center; gap: 25px; font-size: 14px; }
+
 .site-header nav > span { font-size: 12px; color: var(--bo-ink-faint); padding-right: 25px; border-right: 1px solid var(--bo-line-strong); }
+
 .site-header nav a { color: var(--bo-ink); text-decoration: none; }
+
 .site-header nav a:hover { color: var(--bo-accent); text-decoration: underline; text-underline-offset: 5px; }
-@media (max-width: 740px) { .site-header { height: 68px; } .site-brand { font-size: 21px; gap: 10px; } .site-header nav > span { display: none; } .site-header nav { font-size: 12px; } }
+
+@media (max-width: 740px) {
+  .site-header { height: 68px; }
+
+.site-brand { font-size: 21px; gap: 10px; }
+
+.site-header nav > span { display: none; }
+
+.site-header nav { font-size: 12px; }
+}
 
 /* One focus treatment for the whole app, so keyboard users get the same
    affordance on links, buttons and selects alike. */
+
 :focus-visible {
   outline: 2px solid var(--bo-accent);
   outline-offset: 2px;
@@ -102,54 +163,6 @@ select { appearance: none; font: inherit; font-size: 14px; color: var(--bo-ink);
   gap: 14px;
 }
 
-/*
- * Top bar of a game page: leaving is the one thing a player needs that is not
- * about the game, so it sits in the corner rather than below a board they
- * would have to scroll past.
- */
-.page-bar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 12px;
-}
-
-.page-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 12px 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--bo-line-strong);
-  background: var(--bo-surface);
-  color: var(--bo-ink-soft);
-  font-size: 0.86rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-
-.page-back:hover {
-  border-color: var(--bo-line-strong);
-  background: var(--bo-sunk);
-  color: var(--bo-ink);
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--bo-ink);
-}
-
-.page-title-mode {
-  color: var(--bo-ink-faint);
-  font-weight: 700;
-}
-
 button {
   cursor: pointer;
   border: none;
@@ -159,13 +172,16 @@ button {
   min-height: var(--bo-control-h);
   padding: 0 16px;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--bo-text-md);
   font-weight: 700;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
 
+/* Dimming to 0.55 dropped disabled labels to 2.8:1. A disabled control should
+   look inactive, not become unreadable. */
+
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.72;
   cursor: not-allowed;
 }
 
@@ -180,10 +196,31 @@ button:active:not(:disabled) {
 .error-text {
   color: var(--bo-warn);
   font-weight: 700;
+  max-width: 44ch;
+  text-align: center;
+  line-height: 1.5;
 }
 
-.room-page {
-  width: 100%;
+/* Every page has a dead end (unknown game, missing room). They get the same
+   way back as everything else rather than a default browser link. */
+
+.page > a:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--bo-control-h);
+  padding: 0 16px;
+  border-radius: var(--bo-radius);
+  border: 1px solid var(--bo-line-strong);
+  background: var(--bo-surface);
+  color: var(--bo-ink-soft);
+  font-size: var(--bo-text-md);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.page > a:not([class]):hover {
+  background: var(--bo-sunk);
+  color: var(--bo-ink);
 }
 
 .room-code-box {
@@ -199,40 +236,26 @@ button:active:not(:disabled) {
 }
 
 .room-code-box > span {
-  font-size: 0.8rem;
+  font-size: var(--bo-text-xs);
   font-weight: 700;
   color: var(--bo-ink-faint);
 }
 
 .room-code-box strong {
-  font-size: 1.15rem;
+  font-size: var(--bo-text-lg);
   letter-spacing: 0.14em;
   font-variant-numeric: tabular-nums;
   color: var(--bo-ink);
 }
 
 .room-code-box button {
-  font-size: 0.82rem;
-  min-height: 32px;
+  font-size: var(--bo-text-xs);
+  min-height: var(--bo-control-h-sm);
   padding: 0 12px;
 }
 
-/* Who you are, and what the game is waiting for. Two lines, two weights. */
-.you-label {
-  margin: 0;
-  max-width: 44ch;
-  text-align: center;
-  color: var(--bo-ink-soft);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.you-label strong {
-  color: var(--bo-ink);
-}
-
 .status-text {
-  font-size: 1.1rem;
+  font-size: var(--bo-text-lg);
   font-weight: 800;
   margin: 0;
   color: var(--bo-ink);
@@ -240,14 +263,19 @@ button:active:not(:disabled) {
 
 .board-wrap {
   width: 100%;
-  max-width: 560px;
+  /* Also capped against the viewport height: a board that runs past the fold
+     makes the player scroll between every move. The cap only bites on short
+     desktop windows — on a phone the width is always the binding constraint,
+     so a moving mobile address bar cannot resize the board mid-game. 68vh
+     leaves room for the tallest board (장기 is 10 rows to 9 columns). */
+  max-width: min(var(--bo-column), 68vh);
 }
 
 .board-svg {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 10px;
+  border-radius: var(--bo-radius);
   box-shadow: 0 6px 20px rgba(60, 40, 20, 0.28), 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
@@ -259,11 +287,11 @@ button:active:not(:disabled) {
 }
 
 .board-hit--legal:hover {
-  fill: rgba(47, 107, 255, 0.2);
+  fill: color-mix(in srgb, var(--bo-board-focus) 20%, transparent);
 }
 
 .board-hit--selectable:hover {
-  fill: rgba(47, 107, 255, 0.13);
+  fill: color-mix(in srgb, var(--bo-board-focus) 13%, transparent);
 }
 
 .board-dest {
@@ -415,50 +443,33 @@ button:active:not(:disabled) {
   .board-selected,
   .board-dest,
   .modal-backdrop,
-  .modal-panel,
-  .result-icon {
+  .modal-panel {
     animation: none !important;
   }
 }
 
+/* Restarting is the primary action wherever it appears, so it takes the
+   accent. Green stays reserved for saying you won. */
+
 .rematch-btn {
-  background: var(--bo-go);
+  background: var(--bo-accent);
 }
 
 .rematch-btn:hover:not(:disabled) {
-  background: var(--bo-go-deep);
-}
-
-/*
- * Game controls. Everything in here — buttons and the labelled selects alike —
- * is one pill of the same height on the same warm outline, so the row reads as
- * one set of controls instead of a pile of different widgets. Actions sit on
- * the left, settings on the right.
- */
-.toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  width: 100%;
-  justify-content: center;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.toolbar-group--settings {
-  margin-left: auto;
+  background: var(--bo-accent-deep);
 }
 
 .secondary-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: var(--bo-space-1);
+  min-height: var(--bo-control-h);
+  padding: 0 16px;
+  border-radius: var(--bo-radius);
+  font-size: var(--bo-text-md);
+  font-weight: 700;
+  text-decoration: none;
   background: var(--bo-surface);
   border: 1px solid var(--bo-line-strong);
   color: var(--bo-ink-soft);
@@ -470,52 +481,9 @@ button:active:not(:disabled) {
   color: var(--bo-ink);
 }
 
-.toolbar-setup {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: var(--bo-control-h);
-  background: var(--bo-surface);
-  border: 1px solid var(--bo-line-strong);
-  border-radius: var(--bo-radius);
-  padding: 0 10px 0 12px;
-  font-size: 0.82rem;
-  color: var(--bo-ink-faint);
-  font-weight: 700;
-}
-
-.toolbar-setup:focus-within {
-  border-color: var(--bo-accent);
-  box-shadow: 0 0 0 3px var(--bo-accent-wash);
-}
-
-.toolbar-setup select {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: var(--bo-chevron) no-repeat right center / 11px 7px;
-  font: inherit;
-  font-size: 0.88rem;
-  color: var(--bo-ink);
-  padding: 0 18px 0 0;
-  cursor: pointer;
-}
-
-.toolbar-setup select:focus-visible {
-  outline: none;
-}
-
 @media (max-width: 560px) {
-  /* Once the row stacks, each group gets its own centred line: the
+/* Once the row stacks, each group gets its own centred line: the
      actions-left / settings-right split has nothing left to separate. */
-  .toolbar-group {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .toolbar-group--settings {
-    margin-left: 0;
-  }
 }
 
 /* --- Modal --- */
@@ -570,7 +538,8 @@ button:active:not(:disabled) {
 }
 
 .rules-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--bo-space-3);
+  font-size: var(--bo-text-2xl);
 }
 
 .rules-list {
@@ -584,91 +553,12 @@ button:active:not(:disabled) {
   gap: 8px;
 }
 
-.modal-close-btn {
-  background: var(--bo-accent);
-}
-
-/* --- Result popup --- */
-
-@keyframes result-icon-bounce {
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-  50% {
-    transform: scale(1.18) rotate(-4deg);
-  }
-}
-
-.result-panel {
-  padding-top: 32px;
-  padding-bottom: 28px;
-}
-
-.result-icon {
-  font-size: 3.4rem;
-  line-height: 1;
-  margin-bottom: 8px;
-  animation: result-icon-bounce 0.55s ease-in-out 0.25s 2;
-}
-
-.result-title {
-  margin: 4px 0 6px;
-  font-size: 1.6rem;
-}
-
-.result-win .result-title {
-  color: var(--bo-go);
-}
-
-.result-lose .result-title {
-  color: var(--bo-warn);
-}
-
-.result-draw .result-title {
-  color: var(--bo-ink-soft);
-}
-
-.result-subtitle {
-  color: var(--bo-ink-faint);
-  margin: 0 0 20px;
-}
-
-.result-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 @media (max-width: 480px) {
-  .hero h1 {
-    font-size: 1.7rem;
+/* Thumbs, not cursors: every control in a row grows to the 44px target. */
+
+:root {
+    --bo-control-h: 44px;
+    --bo-control-h-sm: 38px;
   }
 }
 
-/* --- Computer opponent --- */
-
-@keyframes bo-thinking-dots {
-  0%,
-  20% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.25;
-  }
-}
-
-.status-text--thinking {
-  color: var(--bo-ink-soft);
-  animation: bo-thinking-dots 1.4s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .status-text--thinking {
-    animation: none;
-  }
-}

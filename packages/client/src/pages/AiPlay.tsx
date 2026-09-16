@@ -133,14 +133,14 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   let resultTitle = "";
   if (status.status === "win") {
     resultKind = status.winner === human ? "win" : "lose";
-    resultTitle = status.winner === human ? "승리했습니다!" : "컴퓨터가 이겼습니다";
+    resultTitle = status.winner === human ? "내가 이겼어요!" : "컴퓨터가 이겼어요";
   } else if (status.status === "draw") {
-    resultTitle = "무승부";
+    resultTitle = "비겼어요";
   }
 
   let statusText = "";
   if (status.status === "ongoing") {
-    statusText = thinking || turn === computer ? "컴퓨터가 생각하는 중..." : "당신의 차례입니다";
+    statusText = thinking || turn === computer ? "컴퓨터가 생각하는 중..." : "내 차례";
   }
 
   if (!started) return <GameSetup meta={engine.meta} mode="컴퓨터와 대전" setupId={setupId} onSetupChange={setSetupId} level={level} onLevelChange={setLevel} human={human} onSideChange={setHuman} onStart={() => startNewGame()} />;

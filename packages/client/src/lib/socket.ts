@@ -15,7 +15,7 @@ export const socket: Socket = io(SERVER_URL, {
   transports: ["websocket", "polling"],
 });
 
-export const CONNECT_ERROR = "온라인 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요. (같은 화면 2인 플레이와 컴퓨터 대전은 서버 없이도 됩니다)";
+export const CONNECT_ERROR = "온라인 서버에 연결할 수 없어요. 컴퓨터와 대전이나 같은 화면 2인 플레이는 그대로 됩니다.";
 
 /**
  * Emits and waits for the server's ack. Rejecting never made sense for the UI,

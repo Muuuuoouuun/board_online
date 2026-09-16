@@ -38,7 +38,7 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
     setStarted(true);
   }
   if (!started) return <GameSetup meta={engine.meta} mode="같은 화면 2인 플레이" setupId={setupId} onSetupChange={setSetupId} onStart={startGame} />;
-  const resultTitle = status.status === "win" ? `${engine.meta.playerLabels[status.winner!]} 승리!` : "무승부";
+  const resultTitle = status.status === "win" ? `${engine.meta.playerLabels[status.winner!]}이 이겼어요!` : "비겼어요";
   return <>
     <MatchLayout meta={engine.meta} status={status.status === "ongoing" ? `${engine.meta.playerLabels[turn]} 차례` : resultTitle} onRules={() => setShowRules(true)} onSetup={() => setStarted(false)}
       details={<><p>같은 화면에서 번갈아 두세요. {GAME_DETAILS[gameId].instruction}</p><p>{GAME_DETAILS[gameId].hint}</p>{status.status !== "ongoing" && resultDismissed && <button className="rematch-btn" onClick={startGame}>다시 하기</button>}</>}
