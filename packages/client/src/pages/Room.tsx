@@ -83,8 +83,16 @@ export default function Room() {
   if (error) {
     return (
       <div className="page">
+        <PageBar title="방에 들어가지 못했어요" />
         <p className="error-text">{error}</p>
-        <Link to="/">홈으로 돌아가기</Link>
+        <div className="toolbar">
+          <div className="toolbar-group">
+            <button onClick={syncRoom}>다시 시도</button>
+            <Link className="secondary-btn" to="/">
+              홈으로
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -92,7 +100,10 @@ export default function Room() {
   if (!roomData || you === null) {
     return (
       <div className="page">
-        <p>방에 연결하는 중...</p>
+        <PageBar title={code} mode="연결하는 중" />
+        <p className="status-text" aria-live="polite">
+          방에 연결하는 중...
+        </p>
       </div>
     );
   }
@@ -110,21 +121,21 @@ export default function Room() {
   let resultTitle = "";
   if (status.status === "win") {
     resultKind = status.winner === you ? "win" : "lose";
-    resultTitle = status.winner === you ? "승리했습니다!" : "패배했습니다";
+    resultTitle = status.winner === you ? "내가 이겼어요!" : "친구가 이겼어요";
   } else if (status.status === "draw") {
     resultKind = "draw";
-    resultTitle = "무승부";
+    resultTitle = "비겼어요";
   }
 
   let statusText: string;
   if (status.status !== "ongoing") {
     statusText = resultTitle;
   } else if (waitingForOpponent) {
-    statusText = "친구가 들어오길 기다리는 중...";
+    statusText = "친구를 기다리는 중...";
   } else if (!opponent?.connected) {
-    statusText = "상대방의 연결이 끊겼습니다. 잠시만 기다려주세요.";
+    statusText = "친구 연결이 끊겼어요. 잠시만 기다려 주세요.";
   } else {
-    statusText = myTurn ? "당신의 차례입니다" : "상대방의 차례입니다";
+    statusText = myTurn ? "내 차례" : "친구 차례";
   }
 
   return (

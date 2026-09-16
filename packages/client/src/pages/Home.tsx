@@ -118,12 +118,12 @@ function GameMotif({ id }: { id: GameId }) {
       {id === "territory" && (
         <>
           <rect x="8" y="8" width="48" height="48" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
-          <path d="M8 8 H32 V20 H20 V32 H8 Z" fill="#2f6bff" opacity="0.75" />
-          <path d="M56 56 H32 V44 H44 V32 H56 Z" fill="#d4622a" opacity="0.75" />
+          <path d="M8 8 H32 V20 H20 V32 H8 Z" fill="var(--bo-player-0)" opacity="0.75" />
+          <path d="M56 56 H32 V44 H44 V32 H56 Z" fill="var(--bo-player-1)" opacity="0.75" />
           <polyline
             points="32,20 40,20 40,28 32,28"
             fill="none"
-            stroke="#2f6bff"
+            stroke="var(--bo-player-0)"
             strokeWidth="2.6"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -135,8 +135,8 @@ function GameMotif({ id }: { id: GameId }) {
       {id === "flick" && (
         <>
           <rect x="8" y="8" width="48" height="48" rx="3" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
-          <path d="M8 8 A24 24 0 0 1 32 32 L8 32 Z" fill="#2f6bff" opacity="0.7" />
-          <path d="M56 56 A20 20 0 0 0 36 36 L56 36 Z" fill="#d4622a" opacity="0.7" />
+          <path d="M8 8 A24 24 0 0 1 32 32 L8 32 Z" fill="var(--bo-player-0)" opacity="0.7" />
+          <path d="M56 56 A20 20 0 0 0 36 36 L56 36 Z" fill="var(--bo-player-1)" opacity="0.7" />
           <polyline
             points="18,24 34,18 44,30"
             fill="none"
@@ -179,17 +179,17 @@ export default function Home() {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [busyGame, setBusyGame] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ gameId: string; message: string } | null>(null);
   const [setupChoice, setSetupChoice] = useState<Record<string, string>>({});
   const [aiLevel, setAiLevel] = useState<Record<string, AiLevel>>({});
 
   async function handleCreate(gameId: string) {
     setBusyGame(gameId);
     setError(null);
-    const res = await emitAck<any>("room:create", { gameId, setupId: setupChoice[gameId] });
+    const res = await emitAck<any>("room:create", { gameId, setupId: setupChoice[gameId] }, 4000);
     setBusyGame(null);
     if (!res.ok) {
-      setError(res.error ?? "방을 만들지 못했습니다.");
+      setError({ gameId, message: res.error ?? "방을 만들지 못했습니다." });
       return;
     }
     setSeatToken(res.code, res.seatToken);
@@ -206,14 +206,13 @@ export default function Home() {
   return (
     <div className="home-page">
       <header className="home-hero">
-        <span className="home-hero-eyebrow">설치도, 로그인도 필요 없어요</span>
         <h1 className="home-hero-title">보드온라인</h1>
         <p className="home-hero-sub">로그인 없이, 방 코드 하나로 친구와 바로 한 판.</p>
+        {/* Two facts the cards below do not already state. */}
         <ul className="home-feature-list">
           {/* Counted from the registry so adding a game can't leave this stale. */}
           <li>고전·전통 보드게임 {GAME_LIST.length}종</li>
-          <li>방 코드로 친구 초대</li>
-          <li>혼자서도 컴퓨터와 대전</li>
+          <li>휴대폰·PC 모두</li>
         </ul>
       </header>
 
@@ -238,11 +237,6 @@ export default function Home() {
             </button>
           </div>
         </form>
-        {error && (
-          <p className="home-error" role="alert">
-            {error}
-          </p>
-        )}
       </section>
 
       <section className="home-grid" aria-label="게임 목록">
@@ -277,7 +271,7 @@ export default function Home() {
               )}
               <div className="home-card-actions">
                 <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
-                  {busy ? "방 만드는 중..." : "친구 초대하기"}
+                  {busy ? "초대 방 만드는 중..." : "친구 초대하기"}
                 </button>
                 <div className="home-card-ai">
                   <Link className="home-card-ai-link" to={aiPath(id, aiLevel[id] ?? "normal", setupChoice[id])}>
@@ -296,6 +290,11 @@ export default function Home() {
                     ))}
                   </select>
                 </div>
+                {error?.gameId === id && (
+                  <p className="home-error" role="alert">
+                    {error.message}
+                  </p>
+                )}
                 <Link
                   className="home-card-local"
                   to={setupChoice[id] ? `/local/${id}?setup=${encodeURIComponent(setupChoice[id])}` : `/local/${id}`}
@@ -309,7 +308,7 @@ export default function Home() {
       </section>
 
       <footer className="home-footer">
-        <p>초기 MVP · 계정 없이 브라우저에서 바로 플레이합니다.</p>
+        <p>브라우저에서 바로 즐기는 무료 보드게임입니다.</p>
       </footer>
     </div>
   );

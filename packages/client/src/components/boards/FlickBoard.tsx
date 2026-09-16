@@ -18,7 +18,7 @@ const VB = SIZE + FRAME * 2;
 /** Minimum drag/click distance (board units) that counts as a deliberate flick, filtering out taps. */
 const MIN_DRAG = 0.8;
 
-const PLAYER_COLORS: [string, string] = ["#2f6bff", "#e2622c"];
+const PLAYER_COLORS: [string, string] = ["var(--bo-player-0)", "var(--bo-player-1)"];
 const CREAM = "#f5f3ee";
 
 function clampCell(v: number): number {
@@ -306,12 +306,12 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
         .fb-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
         .fb-flicks { display: flex; gap: 5px; align-items: center; }
         .fb-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--bo-sunk); border: 1.5px solid var(--bo-line-strong); display: inline-block; }
-        .fb-pip--on { background: var(--pip-color, #2f6bff); border-color: transparent; }
+        .fb-pip--on { background: var(--pip-color, var(--bo-player-0)); border-color: transparent; }
         .fb-reason { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--bo-ink-faint); animation: fb-fade-in 220ms ease-out; }
         .fb-svg { width: 100%; height: auto; display: block; touch-action: none; }
         .fb-stone--active { animation: fb-pulse 1.6s ease-in-out infinite; }
         .fb-actions { display: flex; justify-content: center; }
-        .fb-giveup { background: var(--bo-surface); border: 1px solid var(--bo-line); color: var(--bo-ink-soft); font-size: 0.82rem; min-height: 34px; padding: 0 14px; }
+        .fb-giveup { background: var(--bo-surface); border: 1px solid var(--bo-line); color: var(--bo-ink-soft); font-size: 0.82rem; min-height: var(--bo-control-h-sm); padding: 0 14px; }
         .fb-giveup:hover:not(:disabled) { background: var(--bo-sunk); border-color: var(--bo-line-strong); color: var(--bo-ink); }
         @keyframes fb-pulse { 0%, 100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); } 50% { filter: drop-shadow(0 0 2px rgba(0,0,0,0.4)); } }
         @keyframes fb-fade-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }

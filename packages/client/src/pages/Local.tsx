@@ -68,10 +68,10 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
   let resultTitle = "";
   if (status.status === "win") {
     resultKind = "win";
-    resultTitle = `${engine.meta.playerLabels[status.winner!]} 승리!`;
+    resultTitle = `${engine.meta.playerLabels[status.winner!]}이 이겼어요!`;
   } else if (status.status === "draw") {
     resultKind = "draw";
-    resultTitle = "무승부";
+    resultTitle = "비겼어요";
   }
 
   return (

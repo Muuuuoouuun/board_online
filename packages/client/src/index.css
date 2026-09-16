@@ -28,10 +28,37 @@
   --bo-go-deep: #17603c;
   --bo-warn: #b3261e;
 
+  /*
+   * Type. Six steps, each a step you can actually see — the stylesheets had
+   * grown nineteen sizes, twelve of them inside a 4px band, which is a ladder
+   * with no rungs. Korean text carries less of its weight in x-height than
+   * Latin does, so the small end stops at 12.5px rather than going lower.
+   */
+  --bo-text-xs: 0.78rem;
+  --bo-text-sm: 0.875rem;
+  --bo-text-md: 0.95rem;
+  --bo-text-base: 1.05rem;
+  --bo-text-lg: 1.15rem;
+  --bo-text-xl: 1.35rem;
+  --bo-text-2xl: 1.6rem;
+
+  /* Space. A 4px ladder; everything between rungs was an eyeballed value. */
+  --bo-space-1: 4px;
+  --bo-space-2: 8px;
+  --bo-space-3: 12px;
+  --bo-space-4: 16px;
+  --bo-space-5: 20px;
+  --bo-space-6: 24px;
+  --bo-space-8: 32px;
+  --bo-space-12: 48px;
+
+  --bo-radius-sm: 8px;
   --bo-radius: 10px;
   --bo-radius-lg: 16px;
-  /* One height for every button, select and chip that sits in a control row,
-     and one compact height for the few that sit inside another control. */
+  /* The height of a control that stands on its own — a toolbar button, a
+     labelled select, a lobby card's action. The -sm step is for controls that
+     sit inside another one (the room code's copy button, a card's setup
+     select) or that are navigation rather than action (the back link). */
   --bo-control-h: 38px;
   --bo-control-h-sm: 32px;
   /* The board's width. Every piece of game-page chrome shares this column so
@@ -47,6 +74,14 @@
    * sit on wood and felt at low opacity, where a deep indigo reads as shadow.
    */
   --bo-board-focus: #2f6bff;
+
+  /*
+   * The two players, wherever a game needs to tell them apart by colour rather
+   * than by piece: 땅따먹기's territories, its stones, the lobby motifs for both.
+   * One pair, so the same player is the same colour on every screen.
+   */
+  --bo-player-0: #2f6bff;
+  --bo-player-1: #d4622a;
 
   /* Chevron for every custom-styled <select>, tinted to match the ink. */
   --bo-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.4 1.6 6 6.2l4.6-4.6' fill='none' stroke='%235d4d39' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -109,7 +144,7 @@ body {
   border: 1px solid var(--bo-line-strong);
   background: var(--bo-surface);
   color: var(--bo-ink-soft);
-  font-size: 0.86rem;
+  font-size: var(--bo-text-sm);
   font-weight: 700;
   text-decoration: none;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -123,7 +158,7 @@ body {
 
 .page-title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: var(--bo-text-xl);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--bo-ink);
@@ -143,7 +178,7 @@ button {
   min-height: var(--bo-control-h);
   padding: 0 16px;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--bo-text-md);
   font-weight: 700;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
@@ -190,7 +225,7 @@ button:active:not(:disabled) {
   border: 1px solid var(--bo-line-strong);
   background: var(--bo-surface);
   color: var(--bo-ink-soft);
-  font-size: 0.92rem;
+  font-size: var(--bo-text-md);
   font-weight: 700;
   text-decoration: none;
 }
@@ -217,20 +252,20 @@ button:active:not(:disabled) {
 }
 
 .room-code-box > span {
-  font-size: 0.8rem;
+  font-size: var(--bo-text-xs);
   font-weight: 700;
   color: var(--bo-ink-faint);
 }
 
 .room-code-box strong {
-  font-size: 1.15rem;
+  font-size: var(--bo-text-lg);
   letter-spacing: 0.14em;
   font-variant-numeric: tabular-nums;
   color: var(--bo-ink);
 }
 
 .room-code-box button {
-  font-size: 0.82rem;
+  font-size: var(--bo-text-xs);
   min-height: var(--bo-control-h-sm);
   padding: 0 12px;
 }
@@ -241,7 +276,7 @@ button:active:not(:disabled) {
   max-width: 44ch;
   text-align: center;
   color: var(--bo-ink-soft);
-  font-size: 0.9rem;
+  font-size: var(--bo-text-sm);
   line-height: 1.5;
 }
 
@@ -250,7 +285,7 @@ button:active:not(:disabled) {
 }
 
 .status-text {
-  font-size: 1.1rem;
+  font-size: var(--bo-text-lg);
   font-weight: 800;
   margin: 0;
   color: var(--bo-ink);
@@ -270,7 +305,7 @@ button:active:not(:disabled) {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 10px;
+  border-radius: var(--bo-radius);
   box-shadow: 0 6px 20px rgba(60, 40, 20, 0.28), 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
@@ -282,11 +317,11 @@ button:active:not(:disabled) {
 }
 
 .board-hit--legal:hover {
-  fill: rgba(47, 107, 255, 0.2);
+  fill: color-mix(in srgb, var(--bo-board-focus) 20%, transparent);
 }
 
 .board-hit--selectable:hover {
-  fill: rgba(47, 107, 255, 0.13);
+  fill: color-mix(in srgb, var(--bo-board-focus) 13%, transparent);
 }
 
 .board-dest {
@@ -483,7 +518,14 @@ button:active:not(:disabled) {
 .secondary-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: var(--bo-space-1);
+  min-height: var(--bo-control-h);
+  padding: 0 16px;
+  border-radius: var(--bo-radius);
+  font-size: var(--bo-text-md);
+  font-weight: 700;
+  text-decoration: none;
   background: var(--bo-surface);
   border: 1px solid var(--bo-line-strong);
   color: var(--bo-ink-soft);
@@ -504,7 +546,7 @@ button:active:not(:disabled) {
   border: 1px solid var(--bo-line-strong);
   border-radius: var(--bo-radius);
   padding: 0 10px 0 12px;
-  font-size: 0.82rem;
+  font-size: var(--bo-text-xs);
   color: var(--bo-ink-faint);
   font-weight: 700;
 }
@@ -520,7 +562,7 @@ button:active:not(:disabled) {
   border: none;
   background: var(--bo-chevron) no-repeat right center / 11px 7px;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: var(--bo-text-sm);
   color: var(--bo-ink);
   padding: 0 18px 0 0;
   cursor: pointer;
@@ -595,7 +637,8 @@ button:active:not(:disabled) {
 }
 
 .rules-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--bo-space-3);
+  font-size: var(--bo-text-2xl);
 }
 
 .rules-list {
@@ -607,10 +650,6 @@ button:active:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.modal-close-btn {
-  background: var(--bo-accent);
 }
 
 /* --- Result popup --- */
@@ -631,15 +670,16 @@ button:active:not(:disabled) {
 }
 
 .result-icon {
+  /* Off the type scale on purpose: this is a mark, not text. */
   font-size: 3.4rem;
   line-height: 1;
   margin-bottom: 8px;
-  animation: result-icon-bounce 0.55s ease-in-out 0.25s 2;
+  animation: result-icon-bounce 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) 0.2s 1;
 }
 
 .result-title {
   margin: 4px 0 6px;
-  font-size: 1.6rem;
+  font-size: var(--bo-text-2xl);
 }
 
 .result-win .result-title {

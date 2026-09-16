@@ -7,7 +7,7 @@ const VALUE_LABEL: Record<number, string> = { 1: "도", 2: "개", 3: "걸", 4: "
 
 const WOOD = "#dfb579";
 const INK = "#3a2f28";
-const ACCENT = "#2f6bff";
+const ACCENT = "var(--bo-board-focus)";
 const PLAYER_COLOR: [string, string] = ["#20242b", "#f7efdd"];
 
 /* ---------------------------------------------------------------------- */
@@ -247,7 +247,7 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
             cx={s.x}
             cy={s.y}
             r={s.center ? 6.5 : s.corner ? 6 : 3}
-            fill={s.center ? "rgba(47,107,255,0.25)" : INK}
+            fill={s.center ? "color-mix(in srgb, var(--bo-board-focus) 25%, transparent)" : INK}
             stroke={s.center ? ACCENT : "none"}
             strokeWidth={s.center ? 1.5 : 0}
           />
@@ -268,7 +268,7 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
                   cy={y}
                   r={14}
                   className={canPick ? "board-hit board-hit--selectable" : "board-hit"}
-                  fill={canPick ? "rgba(47,107,255,0.12)" : "transparent"}
+                  fill={canPick ? "color-mix(in srgb, var(--bo-board-focus) 12%, transparent)" : "transparent"}
                   style={{ cursor: canPick ? "pointer" : "default" }}
                   onClick={() => clickToken(g.repId)}
                 />
