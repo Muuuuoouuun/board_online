@@ -259,8 +259,11 @@ button:active:not(:disabled) {
 .board-wrap {
   width: 100%;
   /* Also capped against the viewport height: a board that runs past the fold
-     makes the player scroll between every move. */
-  max-width: min(var(--bo-column), 72vh);
+     makes the player scroll between every move. The cap only bites on short
+     desktop windows — on a phone the width is always the binding constraint,
+     so a moving mobile address bar cannot resize the board mid-game. 68vh
+     leaves room for the tallest board (장기 is 10 rows to 9 columns). */
+  max-width: min(var(--bo-column), 68vh);
 }
 
 .board-svg {

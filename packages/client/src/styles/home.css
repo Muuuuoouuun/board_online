@@ -185,6 +185,9 @@
 .home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  /* Each card is its own height. Stretching them to match meant one card with
+     an extra setup row punched an empty gap into every card beside it. */
+  align-items: start;
   gap: 18px;
   width: 100%;
 }
