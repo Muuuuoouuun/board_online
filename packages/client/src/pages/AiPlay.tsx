@@ -7,8 +7,16 @@ import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
 import { requestAiMove } from "../lib/ai.js";
 
-/** The computer answers at least this quickly-looking; instant replies feel like a bug. */
+/** The computer's first action of a turn lands no sooner than this; instant replies feel like a bug. */
 const MIN_THINK_MS = 420;
+/**
+ * Pacing for the rest of a multi-step turn (a yut throw followed by its move,
+ * the cells of a 땅따먹기 path, the flicks of a stone). Yut keeps a beat so the
+ * thrown sticks can be read; the path games just need to look like drawing.
+ */
+function stepDelayMs(gameId: GameId): number {
+  return gameId === "yut" ? 450 : 160;
+}
 
 export default function AiPlay() {
   const params = useParams<{ gameId: string }>();
@@ -55,6 +63,8 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   const [resultDismissed, setResultDismissed] = useState(false);
   // Bumped whenever a new game starts so a computer reply for the old one is discarded.
   const gameSerial = useRef(0);
+  // How many actions the computer has taken in its current turn (0 = the turn just started).
+  const aiSteps = useRef(0);
 
   const computer: PlayerIndex = human === 0 ? 1 : 0;
   const status = engine.status(state);
@@ -71,13 +81,17 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   // The computer moves whenever it is its turn. `state` is the dependency, so
   // multi-step turns (extra yut throws, checkers jumps) chain naturally.
   useEffect(() => {
-    if (status.status !== "ongoing" || turn !== computer) return;
+    if (status.status !== "ongoing" || turn !== computer) {
+      aiSteps.current = 0;
+      return;
+    }
     const serial = gameSerial.current;
     let cancelled = false;
     setThinking(true);
     const started = Date.now();
+    const minMs = aiSteps.current === 0 ? MIN_THINK_MS : stepDelayMs(gameId);
     requestAiMove(gameId, state, computer, level).then((move) => {
-      const wait = Math.max(0, MIN_THINK_MS - (Date.now() - started));
+      const wait = Math.max(0, minMs - (Date.now() - started));
       setTimeout(() => {
         if (cancelled || serial !== gameSerial.current) return;
         setThinking(false);
@@ -85,7 +99,9 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
         setState((current: any) => {
           if (current !== state) return current; // a newer state already replaced this one
           const result = engine.applyMove(current, move, computer);
-          return result.ok ? result.state : current;
+          if (!result.ok) return current;
+          aiSteps.current++;
+          return result.state;
         });
       }, wait);
     });
@@ -96,6 +112,7 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
 
   function startNewGame(nextSetup = setupId, nextHuman = human) {
     gameSerial.current++;
+    aiSteps.current = 0;
     setThinking(false);
     setHuman(nextHuman);
     setState(engine.createInitialState(nextSetup));
