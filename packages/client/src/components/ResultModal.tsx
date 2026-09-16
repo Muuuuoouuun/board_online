@@ -1,9 +1,7 @@
 import { useEffect } from "react";
-import Modal from "./Modal.js";
 import { playSound } from "../lib/sound.js";
 
 export type ResultKind = "win" | "lose" | "draw";
-
 interface ResultModalProps {
   open: boolean;
   kind: ResultKind;
@@ -13,33 +11,17 @@ interface ResultModalProps {
   onClose: () => void;
 }
 
-const ICON: Record<ResultKind, string> = {
-  win: "🎉",
-  lose: "💀",
-  draw: "🤝",
-};
-
+/** Results stay below the board so the deciding move remains visible. */
 export default function ResultModal({ open, kind, title, subtitle, onRematch, onClose }: ResultModalProps) {
   useEffect(() => {
     if (!open) return;
-    // let the closing move's own sound land first
     const timer = setTimeout(() => playSound(kind), 260);
     return () => clearTimeout(timer);
   }, [open, kind]);
-
-  return (
-    <Modal open={open} onClose={onClose} panelClassName={`result-panel result-${kind}`}>
-      <div className="result-icon">{ICON[kind]}</div>
-      <h2 className="result-title">{title}</h2>
-      {subtitle && <p className="result-subtitle">{subtitle}</p>}
-      <div className="result-actions">
-        <button className="rematch-btn" onClick={onRematch}>
-          다시 하기
-        </button>
-        <button className="secondary-btn" onClick={onClose}>
-          보드 보기
-        </button>
-      </div>
-    </Modal>
-  );
+  if (!open) return null;
+  return <section className={`match-result result-${kind}`} aria-label="게임 결과">
+    <div role="status"><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
+    <button className="rematch-btn" onClick={onRematch}>다시 하기</button>
+    <button className="secondary-btn" onClick={onClose}>보드만 보기</button>
+  </section>;
 }

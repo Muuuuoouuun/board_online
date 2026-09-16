@@ -19,7 +19,11 @@ export default function SoundToggle() {
 
   return (
     <button className="secondary-btn sound-toggle" onClick={toggle} aria-pressed={muted}>
-      <span aria-hidden="true">{muted ? "🔇" : "🔊"}</span> 음소거
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M11 4 6 8H3v8h3l5 4V4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        {muted ? <path d="m16 9 5 6m0-6-5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /> : <path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />}
+      </svg>
+      음소거
     </button>
   );
 }

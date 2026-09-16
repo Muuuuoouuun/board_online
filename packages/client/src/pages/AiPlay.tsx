@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { AI_LEVELS, getEngine, isAiLevel, isGameId, type AiLevel, type GameId, type PlayerIndex } from "@board-online/shared";
+import { getEngine, isAiLevel, isGameId, type AiLevel, type GameId, type PlayerIndex } from "@board-online/shared";
 import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
-import SoundToggle from "../components/SoundToggle.js";
-import PageBar from "../components/PageBar.js";
+import GameSetup from "../components/GameSetup.js";
+import MatchLayout from "../components/MatchLayout.js";
 import { requestAiMove } from "../lib/ai.js";
 
 /** The computer's first action of a turn lands no sooner than this; instant replies feel like a bug. */
@@ -37,6 +37,7 @@ export default function AiPlay() {
   const sideParam = searchParams.get("side");
   return (
     <AiGame
+      key={gameId}
       gameId={gameId}
       initialLevel={isAiLevel(levelParam) ? levelParam : "normal"}
       initialSide={sideParam === "1" ? 1 : 0}
@@ -55,10 +56,11 @@ interface AiGameProps {
 function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps) {
   const engine = useMemo(() => getEngine(gameId), [gameId]);
   const setupOptions = engine.meta.setupOptions;
-  const [setupId, setSetupId] = useState(() => initialSetup ?? setupOptions?.[0].id);
+  const [setupId, setSetupId] = useState(() => setupOptions?.find(option => option.id === initialSetup)?.id ?? setupOptions?.[0].id);
   const [level, setLevel] = useState<AiLevel>(initialLevel);
   const [human, setHuman] = useState<PlayerIndex>(initialSide);
   const [state, setState] = useState<any>(() => engine.createInitialState(initialSetup));
+  const [started, setStarted] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [resultDismissed, setResultDismissed] = useState(false);
@@ -66,15 +68,12 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   const gameSerial = useRef(0);
   // How many actions the computer has taken in its current turn (0 = the turn just started).
   const aiSteps = useRef(0);
-  // Whether this game has been played at all — swapping sides or changing the
-  // opening formation starts a new one, which only matters once it would lose something.
-  const [started, setStarted] = useState(false);
 
   const computer: PlayerIndex = human === 0 ? 1 : 0;
   const status = engine.status(state);
   const turn = engine.turn(state);
   const pieces = engine.pieces(state);
-  const humanTurn = status.status === "ongoing" && turn === human;
+  const humanTurn = started && status.status === "ongoing" && turn === human;
   const legalMoves = humanTurn ? engine.legalMoves(state, human) : [];
 
   const statusKey = `${status.status}:${status.winner}:${status.reason}`;
@@ -85,17 +84,17 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
   // The computer moves whenever it is its turn. `state` is the dependency, so
   // multi-step turns (extra yut throws, checkers jumps) chain naturally.
   useEffect(() => {
-    if (status.status !== "ongoing" || turn !== computer) {
+    if (!started || status.status !== "ongoing" || turn !== computer) {
       aiSteps.current = 0;
       return;
     }
     const serial = gameSerial.current;
     let cancelled = false;
     setThinking(true);
-    const started = Date.now();
+    const thinkStartedAt = Date.now();
     const minMs = aiSteps.current === 0 ? MIN_THINK_MS : stepDelayMs(gameId);
     requestAiMove(gameId, state, computer, level).then((move) => {
-      const wait = Math.max(0, minMs - (Date.now() - started));
+      const wait = Math.max(0, minMs - (Date.now() - thinkStartedAt));
       setTimeout(() => {
         if (cancelled || serial !== gameSerial.current) return;
         setThinking(false);
@@ -112,33 +111,22 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
     return () => {
       cancelled = true;
     };
-  }, [state, computer, level, gameId, engine, status.status, turn]);
+  }, [started, state, computer, level, gameId, engine, status.status, turn]);
 
   function startNewGame(nextSetup = setupId, nextHuman = human) {
     gameSerial.current++;
     aiSteps.current = 0;
     setThinking(false);
-    setStarted(false);
     setHuman(nextHuman);
     setState(engine.createInitialState(nextSetup));
+    setResultDismissed(false);
+    setStarted(true);
   }
 
   function handleMove(move: unknown) {
     if (!humanTurn) return;
     const result = engine.applyMove(state, move, human);
-    if (result.ok) {
-      setStarted(true);
-      setState(result.state);
-    }
-  }
-
-  function handleSetupChange(next: string) {
-    setSetupId(next);
-    startNewGame(next);
-  }
-
-  function handleSwapSides() {
-    startNewGame(setupId, computer);
+    if (result.ok) setState(result.state);
   }
 
   let resultKind: ResultKind = "draw";
@@ -150,92 +138,19 @@ function AiGame({ gameId, initialLevel, initialSide, initialSetup }: AiGameProps
     resultTitle = "비겼어요";
   }
 
-  let statusText = resultTitle;
+  let statusText = "";
   if (status.status === "ongoing") {
     statusText = thinking || turn === computer ? "컴퓨터가 생각하는 중..." : "내 차례";
   }
 
-  return (
-    <div className="page">
-      <PageBar title={engine.meta.nameKo} mode="컴퓨터와 대전" />
+  if (!started) return <GameSetup meta={engine.meta} mode="컴퓨터와 대전" setupId={setupId} onSetupChange={setSetupId} level={level} onLevelChange={setLevel} human={human} onSideChange={setHuman} onStart={() => startNewGame()} />;
 
-      <div className="toolbar">
-        <div className="toolbar-group">
-          <button className="secondary-btn" onClick={() => setShowRules(true)}>
-            규칙
-          </button>
-          <SoundToggle />
-          {status.status !== "ongoing" && resultDismissed && (
-            <button className="rematch-btn" onClick={() => startNewGame()}>
-              다시 하기
-            </button>
-          )}
-        </div>
-        <div className="toolbar-group toolbar-group--settings">
-          <label className="toolbar-setup">
-            <span>난이도</span>
-            <select value={level} onChange={(e) => setLevel(e.target.value as AiLevel)} aria-label="컴퓨터 난이도">
-              {AI_LEVELS.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {setupOptions && (
-            <label className="toolbar-setup">
-              <span>배치</span>
-              <select
-                value={setupId}
-                disabled={started}
-                title={started ? "판이 시작된 뒤에는 배치를 바꿀 수 없습니다" : undefined}
-                onChange={(e) => handleSetupChange(e.target.value)}
-              >
-                {setupOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <button className="secondary-btn" onClick={handleSwapSides}>
-            색 바꿔 새 판
-          </button>
-        </div>
-      </div>
-
-      <p className="you-label">
-        나는 <strong>{engine.meta.playerLabels[human]}</strong>, 컴퓨터는{" "}
-        <strong>{engine.meta.playerLabels[computer]}</strong>
-      </p>
-      {statusText && (
-        <p className={`status-text${thinking ? " status-text--thinking" : ""}`} aria-live="polite">
-          {statusText}
-        </p>
-      )}
-
-      <div className="board-wrap">
-        <GameView
-          engine={engine}
-          state={state}
-          pieces={pieces}
-          legalMoves={legalMoves}
-          onMove={handleMove}
-          interactive={humanTurn && !thinking}
-          you={human}
-        />
-      </div>
-
-      <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={gameId} />
-      <ResultModal
-        open={status.status !== "ongoing" && !resultDismissed}
-        kind={resultKind}
-        title={resultTitle}
-        subtitle={status.reason}
-        onRematch={() => startNewGame()}
-        onClose={() => setResultDismissed(true)}
-      />
-    </div>
-  );
+  return <>
+    <MatchLayout meta={engine.meta} status={status.status === "ongoing" ? statusText : resultTitle} onRules={() => setShowRules(true)} onSetup={() => { gameSerial.current++; setThinking(false); setStarted(false); }}
+      details={<><p>나는 {engine.meta.playerLabels[human]}, 컴퓨터는 {engine.meta.playerLabels[computer]}</p>{status.status !== "ongoing" && resultDismissed && <button className="rematch-btn" onClick={() => startNewGame()}>다시 하기</button>}</>}
+      result={<ResultModal open={status.status !== "ongoing" && !resultDismissed} kind={resultKind} title={resultTitle} subtitle={status.reason} onRematch={() => startNewGame()} onClose={() => setResultDismissed(true)} />}>
+      <GameView key={gameSerial.current} engine={engine} state={state} pieces={pieces} legalMoves={legalMoves} onMove={handleMove} interactive={humanTurn && !thinking} you={human} />
+    </MatchLayout>
+    <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={gameId} />
+  </>;
 }

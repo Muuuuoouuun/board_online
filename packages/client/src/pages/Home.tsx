@@ -1,314 +1,279 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AI_LEVELS, GAME_LIST, getEngine, type AiLevel, type GameId } from "@board-online/shared";
+import {
+  AI_LEVELS,
+  GAME_LIST,
+  getEngine,
+  type AiLevel,
+  type GameId,
+} from "@board-online/shared";
+import { GonuPreview } from "../components/boards/GonuBoard.js";
+import GameSetup from "../components/GameSetup.js";
+import SiteHeader, { ArrowIcon } from "../components/SiteHeader.js";
+import { GAME_DETAILS, type Category } from "../lib/catalogue.js";
 import { emitAck } from "../lib/socket.js";
 import { setSeatToken } from "../lib/storage.js";
 import "../styles/home.css";
 
-/** Shared 4x4 checkerboard cells reused by the chess/checkers motifs. */
-const CHECKERBOARD_CELLS: { x: number; y: number; dark: boolean }[] = (() => {
-  const cells: { x: number; y: number; dark: boolean }[] = [];
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      cells.push({ x: 6 + c * 13, y: 6 + r * 13, dark: (r + c) % 2 === 0 });
-    }
-  }
-  return cells;
-})();
-
-function CheckerboardCells({ darkFill, lightFill }: { darkFill: string; lightFill: string }) {
-  return (
-    <>
-      {CHECKERBOARD_CELLS.map((cell, i) => (
-        <rect key={i} x={cell.x} y={cell.y} width={13} height={13} fill={cell.dark ? darkFill : lightFill} />
-      ))}
-    </>
-  );
-}
-
-/** Small decorative, hand-drawn inline-SVG motif hinting at each game's board/pieces. */
-function GameMotif({ id }: { id: GameId }) {
-  return (
-    <svg className="home-motif-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      {id === "gomoku" && (
-        <>
-          <g stroke="#b58863" strokeWidth="1.3" opacity="0.55">
-            <line x1="14" y1="10" x2="14" y2="54" />
-            <line x1="26" y1="10" x2="26" y2="54" />
-            <line x1="38" y1="10" x2="38" y2="54" />
-            <line x1="50" y1="10" x2="50" y2="54" />
-            <line x1="10" y1="14" x2="54" y2="14" />
-            <line x1="10" y1="26" x2="54" y2="26" />
-            <line x1="10" y1="38" x2="54" y2="38" />
-            <line x1="10" y1="50" x2="54" y2="50" />
-          </g>
-          <circle cx="26" cy="26" r="7.5" fill="#2b2620" />
-          <circle cx="38" cy="38" r="7.5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.3" />
-        </>
-      )}
-
-      {id === "chess" && (
-        <>
-          <CheckerboardCells darkFill="#b58863" lightFill="#efe2c6" />
-          <g fill="#faf6ec" stroke="#2b2620" strokeWidth="1.1" strokeLinejoin="round">
-            <path d="M21 43 L32 25 L43 43 Z" />
-            <circle cx="32" cy="19" r="3.6" />
-            <rect x="30.4" y="11" width="3.2" height="6.5" />
-            <rect x="27" y="13.2" width="10" height="3" />
-          </g>
-        </>
-      )}
-
-      {id === "janggi" && (
-        <>
-          <g stroke="#8a6a45" strokeWidth="1.6" fill="none">
-            <rect x="13" y="13" width="38" height="38" />
-            <line x1="13" y1="13" x2="51" y2="51" />
-            <line x1="51" y1="13" x2="13" y2="51" />
-          </g>
-          <polygon
-            points="32,19 41,24 41,40 32,45 23,40 23,24"
-            fill="#dfb579"
-            stroke="#8a6a45"
-            strokeWidth="1.4"
-          />
-          <line x1="26" y1="32" x2="38" y2="32" stroke="#5c3d21" strokeWidth="1.8" strokeLinecap="round" />
-        </>
-      )}
-
-      {id === "checkers" && (
-        <>
-          <CheckerboardCells darkFill="#b58863" lightFill="#efe2c6" />
-          <circle cx="32" cy="37" r="9" fill="#b58863" stroke="#5c3d21" strokeWidth="1.2" />
-          <circle cx="32" cy="27" r="9" fill="#efe2c6" stroke="#8a6a45" strokeWidth="1.2" />
-        </>
-      )}
-
-      {id === "yut" && (
-        <>
-          <rect x="12" y="12" width="40" height="40" rx="2" fill="none" stroke="#8a6a45" strokeWidth="1.6" />
-          <line x1="12" y1="12" x2="52" y2="52" stroke="#c9b48c" strokeWidth="1.2" />
-          <line x1="52" y1="12" x2="12" y2="52" stroke="#c9b48c" strokeWidth="1.2" />
-          <g fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2">
-            <circle cx="12" cy="12" r="4.6" />
-            <circle cx="52" cy="12" r="4.6" />
-            <circle cx="12" cy="52" r="4.6" />
-            <circle cx="52" cy="52" r="4.6" />
-            <circle cx="32" cy="32" r="5.2" />
-          </g>
-          <circle cx="32" cy="12" r="3.4" fill="#2b2620" />
-          <circle cx="12" cy="32" r="3.4" fill="#b3261e" />
-        </>
-      )}
-
-      {id === "gonu" && (
-        <>
-          <g stroke="#8a6a45" strokeWidth="1.6" fill="none">
-            <rect x="14" y="14" width="36" height="36" />
-            <line x1="32" y1="14" x2="32" y2="50" />
-            <line x1="14" y1="32" x2="50" y2="32" />
-          </g>
-          <circle cx="14" cy="14" r="5" fill="#2b2620" />
-          <circle cx="50" cy="14" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
-          <circle cx="14" cy="50" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
-          <circle cx="50" cy="50" r="5" fill="#2b2620" />
-        </>
-      )}
-
-      {id === "territory" && (
-        <>
-          <rect x="8" y="8" width="48" height="48" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
-          <path d="M8 8 H32 V20 H20 V32 H8 Z" fill="var(--bo-player-0)" opacity="0.75" />
-          <path d="M56 56 H32 V44 H44 V32 H56 Z" fill="var(--bo-player-1)" opacity="0.75" />
-          <polyline
-            points="32,20 40,20 40,28 32,28"
-            fill="none"
-            stroke="var(--bo-player-0)"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="3 2.5"
-          />
-        </>
-      )}
-
-      {id === "flick" && (
-        <>
-          <rect x="8" y="8" width="48" height="48" rx="3" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
-          <path d="M8 8 A24 24 0 0 1 32 32 L8 32 Z" fill="var(--bo-player-0)" opacity="0.7" />
-          <path d="M56 56 A20 20 0 0 0 36 36 L56 36 Z" fill="var(--bo-player-1)" opacity="0.7" />
-          <polyline
-            points="18,24 34,18 44,30"
-            fill="none"
-            stroke="#5c3d21"
-            strokeWidth="1.8"
-            strokeDasharray="3 2"
-            strokeLinecap="round"
-          />
-          <circle cx="44" cy="30" r="4.6" fill="#2b2620" />
-        </>
-      )}
-
-      {id === "reversi" && (
-        <>
-          <g stroke="#c9b48c" strokeWidth="1.2">
-            <line x1="8" y1="20" x2="56" y2="20" />
-            <line x1="8" y1="32" x2="56" y2="32" />
-            <line x1="8" y1="44" x2="56" y2="44" />
-            <line x1="20" y1="8" x2="20" y2="56" />
-            <line x1="32" y1="8" x2="32" y2="56" />
-            <line x1="44" y1="8" x2="44" y2="56" />
-          </g>
-          <circle cx="26" cy="26" r="6.4" fill="#2b2620" />
-          <circle cx="38" cy="26" r="6.4" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1" />
-          <circle cx="26" cy="38" r="6.4" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1" />
-          <circle cx="38" cy="38" r="6.4" fill="#2b2620" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function aiPath(id: GameId, level: AiLevel, setup?: string): string {
-  const q = new URLSearchParams({ level });
-  if (setup) q.set("setup", setup);
-  return `/ai/${id}?${q.toString()}`;
-}
+type PlayMode = "ai" | "online" | "local";
+const MODES: { id: PlayMode; label: string }[] = [
+  { id: "local", label: "같은 화면" },
+  { id: "online", label: "친구 초대" },
+  { id: "ai", label: "컴퓨터 대전" },
+];
+const CATEGORIES: Category[] = ["전체", "전략", "전통", "가볍게"];
 
 export default function Home() {
   const navigate = useNavigate();
+  const [setupGame, setSetupGame] = useState<GameId | null>(null);
   const [joinCode, setJoinCode] = useState("");
-  const [busyGame, setBusyGame] = useState<string | null>(null);
-  const [error, setError] = useState<{ gameId: string; message: string } | null>(null);
+  const [busyGame, setBusyGame] = useState<GameId | null>(null);
+  const creating = useRef(false);
+  const [error, setError] = useState<string | null>(null);
   const [setupChoice, setSetupChoice] = useState<Record<string, string>>({});
-  const [aiLevel, setAiLevel] = useState<Record<string, AiLevel>>({});
+  const [aiLevel, setAiLevel] = useState<AiLevel>("normal");
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [category, setCategory] = useState<Category>("전체");
+  const visibleGames = GAME_LIST.filter(
+    (id) =>
+      category === "전체" || GAME_DETAILS[id].categories.includes(category),
+  );
 
-  async function handleCreate(gameId: string) {
+  async function handleCreate(gameId: GameId) {
+    if (creating.current) return;
+    creating.current = true;
     setBusyGame(gameId);
     setError(null);
-    const res = await emitAck<any>("room:create", { gameId, setupId: setupChoice[gameId] }, 4000);
-    setBusyGame(null);
-    if (!res.ok) {
-      setError({ gameId, message: res.error ?? "방을 만들지 못했습니다." });
-      return;
+    try {
+      const res = await emitAck<any>("room:create", {
+        gameId,
+        setupId: setupChoice[gameId],
+      });
+      if (!res.ok) {
+        setError(res.error ?? "방을 만들지 못했습니다.");
+        return;
+      }
+      setSeatToken(res.code, res.seatToken);
+      navigate(`/room/${res.code}`);
+    } catch {
+      setError("서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      creating.current = false;
+      setBusyGame(null);
     }
-    setSeatToken(res.code, res.seatToken);
-    navigate(`/room/${res.code}`);
   }
 
   function handleJoin(e: FormEvent) {
     e.preventDefault();
     const code = joinCode.trim().toUpperCase();
-    if (!code) return;
-    navigate(`/room/${code}`);
+    if (/^[A-Z0-9]{6}$/.test(code)) navigate(`/room/${code}`);
+  }
+
+  function playPath(id: GameId) {
+    const query = new URLSearchParams();
+    if (mode === "ai") query.set("level", aiLevel);
+    if (setupChoice[id]) query.set("setup", setupChoice[id]);
+    return `/${mode === "ai" ? "ai" : "local"}/${id}${query.size ? `?${query}` : ""}`;
+  }
+
+  if (setupGame) {
+    const meta = getEngine(setupGame).meta;
+    return <GameSetup meta={meta} mode="친구 초대" setupId={setupChoice[setupGame] ?? meta.setupOptions?.[0].id} onSetupChange={id => setSetupChoice(prev => ({ ...prev, [setupGame]: id }))} onStart={() => handleCreate(setupGame)} onCancel={() => { setSetupGame(null); setError(null); }} busy={busyGame !== null} error={error} startLabel="방 만들고 친구 초대" />;
   }
 
   return (
     <div className="home-page">
-      <header className="home-hero">
-        <h1 className="home-hero-title">보드온라인</h1>
-        <p className="home-hero-sub">로그인 없이, 방 코드 하나로 친구와 바로 한 판.</p>
-        {/* Two facts the cards below do not already state. */}
-        <ul className="home-feature-list">
-          {/* Counted from the registry so adding a game can't leave this stale. */}
-          <li>고전·전통 보드게임 {GAME_LIST.length}종</li>
-          <li>휴대폰·PC 모두</li>
-        </ul>
-      </header>
+      <SiteHeader />
+      <main>
+        <section className="home-hero" aria-labelledby="hero-title">
+          <div className="home-hero-image" aria-hidden="true">
+            <img
+              src="/art/table-still-life.webp"
+              alt=""
+              width="1536"
+              height="1024"
+            />
+          </div>
+          <div className="home-hero-copy">
+            <h1 id="hero-title">
+              마주 앉는 즐거움,
+              <br />
+              어디서나 한 판.
+            </h1>
+            <p>
+              하나의 화면, 마주 앉은 두 사람.
+              <br />
+              오래된 게임의 새로운 플레이 공간.
+            </p>
+            <div className="home-hero-actions">
+              <Link className="home-hero-primary" to="/local/gomoku">
+                둘이서 한 판
+              </Link>
+              <a className="home-text-link" href="#games">
+                게임 둘러보기 <ArrowIcon />
+              </a>
+            </div>
+          </div>
+        </section>
 
-      <section className="home-join" aria-label="방 코드로 입장하기">
-        <form className="home-join-form" onSubmit={handleJoin}>
-          <label className="home-join-label" htmlFor="home-join-input">
-            이미 방 코드가 있으신가요?
-          </label>
-          <div className="home-join-row">
+        <section className="home-join" aria-label="방 코드로 입장하기">
+          <div className="home-join-copy">
+            <svg
+              className="home-friends-icon"
+              viewBox="0 0 32 32"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="10" r="4" />
+              <path d="M3 26v-3a9 9 0 0 1 18 0v3Z" />
+              <circle cx="23" cy="11" r="3.5" />
+              <path d="M23 18a7 7 0 0 1 7 7v1h-6v-3a12 12 0 0 0-1-5Z" />
+            </svg>
+            <div>
+              <h2>친구가 기다리고 있나요?</h2>
+              <p>초대받은 방 코드로 바로 입장하세요.</p>
+            </div>
+          </div>
+          <form className="home-join-form" onSubmit={handleJoin}>
             <input
-              id="home-join-input"
-              className="home-join-input"
+              aria-label="방 코드 6자리"
               value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="예: 4UEJT3"
-              maxLength={8}
+              onChange={(e) =>
+                setJoinCode(
+                  e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+                )
+              }
+              placeholder="방 코드 6자리"
+              maxLength={6}
+              minLength={6}
+              pattern="[A-Za-z0-9]{6}"
+              required
               autoComplete="off"
               spellCheck={false}
             />
-            <button className="home-join-btn" type="submit" disabled={joinCode.trim().length === 0}>
-              입장하기
-            </button>
-          </div>
-        </form>
-      </section>
+            <button type="submit">입장하기</button>
+          </form>
+        </section>
 
-      <section className="home-grid" aria-label="게임 목록">
-        {GAME_LIST.map((id, i) => {
-          const engine = getEngine(id);
-          const busy = busyGame === id;
-          return (
-            <article className="home-card" key={id} style={{ animationDelay: `${i * 70}ms` }}>
-              <header className="home-card-head">
-                <div className="home-card-motif">
-                  <GameMotif id={id} />
-                </div>
-                <div className="home-card-body">
-                  <h2 className="home-card-title">{engine.meta.nameKo}</h2>
-                  <span className="home-card-players">{engine.meta.playerLabels.join(" vs ")}</span>
-                </div>
-              </header>
-              {engine.meta.setupOptions && (
-                <label className="home-card-setup">
-                  <span>시작 배치</span>
-                  <select
-                    value={setupChoice[id] ?? engine.meta.setupOptions[0].id}
-                    onChange={(e) => setSetupChoice((prev) => ({ ...prev, [id]: e.target.value }))}
-                  >
-                    {engine.meta.setupOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <div className="home-card-actions">
-                <button className="home-card-primary" disabled={busy} onClick={() => handleCreate(id)}>
-                  {busy ? "초대 방 만드는 중..." : "친구 초대하기"}
-                </button>
-                <div className="home-card-ai">
-                  <Link className="home-card-ai-link" to={aiPath(id, aiLevel[id] ?? "normal", setupChoice[id])}>
-                    컴퓨터와 대전
-                  </Link>
-                  <select
-                    className="home-card-ai-level"
-                    value={aiLevel[id] ?? "normal"}
-                    onChange={(e) => setAiLevel((prev) => ({ ...prev, [id]: e.target.value as AiLevel }))}
-                    aria-label={`${engine.meta.nameKo} 컴퓨터 난이도`}
-                  >
-                    {AI_LEVELS.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {error?.gameId === id && (
-                  <p className="home-error" role="alert">
-                    {error.message}
-                  </p>
-                )}
-                <Link
-                  className="home-card-local"
-                  to={setupChoice[id] ? `/local/${id}?setup=${encodeURIComponent(setupChoice[id])}` : `/local/${id}`}
+        <section
+          className="home-catalogue"
+          id="games"
+          aria-labelledby="games-title"
+        >
+          <div className="home-catalogue-heading">
+            <div>
+              <h2 id="games-title">오늘은 어떤 게임을 할까요?</h2>
+              <p>{GAME_LIST.length}가지 클래식, 취향대로 골라보세요.</p>
+            </div>
+            <div className="home-modes" role="group" aria-label="대전 방식">
+              {MODES.map((item) => (
+                <button
+                  key={item.id}
+                  aria-pressed={mode === item.id}
+                  onClick={() => setMode(item.id)}
                 >
-                  같은 화면 2인 플레이
-                </Link>
-              </div>
-            </article>
-          );
-        })}
-      </section>
-
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="home-filters">
+            <div
+              className="home-categories"
+              role="group"
+              aria-label="게임 분류"
+            >
+              {CATEGORIES.map((item) => (
+                <button
+                  key={item}
+                  aria-pressed={category === item}
+                  onClick={() => setCategory(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            {mode === "ai" ? (
+              <label className="home-difficulty">
+                난이도
+                <select
+                  value={aiLevel}
+                  onChange={(e) => setAiLevel(e.target.value as AiLevel)}
+                  aria-label="컴퓨터 난이도"
+                >
+                  {AI_LEVELS.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <span className="home-mode-note">
+                {mode === "online"
+                  ? "방 코드로 친구와 함께"
+                  : "한 기기에서 번갈아 두기"}
+              </span>
+            )}
+          </div>
+          {error && (
+            <p className="home-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="home-grid">
+            {visibleGames.map((id) => {
+              const engine = getEngine(id);
+              const detail = GAME_DETAILS[id];
+              const action = mode === "online" ? "친구 초대하기" : "시작하기";
+              return (
+                <article className="home-card" key={id}>
+                  {id === "gonu" ? <div className="home-card-photo home-card-photo--gonu"><GonuPreview /></div> : <div
+                    className="home-card-photo"
+                    aria-hidden="true"
+                    style={{
+                      backgroundPosition: `${(detail.art % 3) * 50}% ${Math.floor(detail.art / 3) * 50}%`,
+                    }}
+                  />}
+                  <div className="home-card-body">
+                    <h3>{engine.meta.nameKo}</h3>
+                    <p className="home-card-description">
+                      {detail.description}
+                    </p>
+                    <div className="home-card-bottom">
+                      <span>{engine.meta.playerLabels.join(" vs ")}</span>
+                      {mode === "online" ? (
+                        <button
+                          className="home-card-action"
+                          disabled={busyGame !== null}
+                          onClick={() => { setError(null); setSetupGame(id); }}
+                          aria-label={`${engine.meta.nameKo} 친구 초대하기`}
+                        >
+                          {busyGame === id ? "방 만드는 중..." : action}
+                          <ArrowIcon />
+                        </button>
+                      ) : (
+                        <Link
+                          className="home-card-action"
+                          to={playPath(id)}
+                          aria-label={`${engine.meta.nameKo} ${mode === "ai" ? "컴퓨터 대전" : "같은 화면"} 시작하기`}
+                        >
+                          {action}
+                          <ArrowIcon />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      </main>
       <footer className="home-footer">
-        <p>브라우저에서 바로 즐기는 무료 보드게임입니다.</p>
+        <span>보드온라인</span>
+        <p>설치도, 로그인도 없이. 우리 사이에 한 판.</p>
+        <span>고전·전통 보드게임 {GAME_LIST.length}종</span>
       </footer>
     </div>
   );

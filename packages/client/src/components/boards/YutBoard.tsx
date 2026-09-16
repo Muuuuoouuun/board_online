@@ -228,6 +228,7 @@ export default function YutBoard(props: GameViewProps<YutState, YutMove>) {
         </defs>
 
         <rect x={0} y={0} width={VB} height={VB} rx={10} fill="url(#yb-wood)" />
+        <image href="/art/ash-wood.webp" x={0} y={0} width={VB} height={VB} preserveAspectRatio="none" pointerEvents="none" />
 
         {/* the square path */}
         <polygon

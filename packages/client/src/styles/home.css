@@ -1,412 +1,563 @@
-/* Lobby (Home) page styles — scoped entirely under .home-* so nothing here
-   can leak into the game pages that share index.css. */
-
+/* Editorial lobby. Imagery is a single generated 3×3 photographic atlas. */
 .home-page {
-  max-width: 960px;
+  max-width: 1328px;
   margin: 0 auto;
-  padding: 32px 20px 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px;
+  padding: 0 24px;
+}
+.home-page main {
   width: 100%;
 }
-
-/* --- Hero --- */
-
 .home-hero {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--bo-space-2);
-  max-width: 640px;
-}
-
-.home-hero-title {
-  margin: 0;
-  font-size: clamp(2.1rem, 7vw, 3rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--bo-ink);
   position: relative;
-  display: inline-block;
-}
-
-.home-hero-sub {
-  margin: 0;
-  color: var(--bo-ink-soft);
-  font-size: var(--bo-text-base);
-}
-
-.home-feature-list {
-  list-style: none;
+  min-height: 400px;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  padding: 0;
-  margin: 8px 0 0;
+  align-items: center;
+  isolation: isolate;
 }
-
-.home-feature-list li {
-  background: var(--bo-surface);
-  border: 1px solid var(--bo-line);
-  color: var(--bo-ink-soft);
-  font-size: var(--bo-text-xs);
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 999px;
+.home-hero-image {
+  position: absolute;
+  z-index: -1;
+  inset: 0 -24px 0 32%;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 24%,
+    #000 94%,
+    transparent
+  );
 }
-
-/* --- Join by code --- */
-
-.home-join {
+.home-hero-image img {
   width: 100%;
-  max-width: 480px;
-  background: var(--bo-surface);
-  border: 1px solid var(--bo-line);
-  border-radius: var(--bo-radius-lg);
-  padding: 18px 20px;
-  box-shadow: var(--bo-shadow-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 57%;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 8%,
+    #000 90%,
+    transparent
+  );
 }
-
+.home-hero-copy {
+  padding: 44px 20px 44px;
+}
+.home-hero h1 {
+  margin: 0 0 22px;
+  font-family: var(--bo-serif);
+  font-size: clamp(38px, 4.55vw, 62px);
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  word-break: keep-all;
+}
+.home-hero-copy > p {
+  font-size: 17px;
+  color: var(--bo-ink-soft);
+  line-height: 1.85;
+  margin: 0;
+}
+.home-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-top: 30px;
+}
+.home-hero-primary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 36px;
+  background: var(--bo-accent);
+  color: white;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.home-hero-primary:hover {
+  background: var(--bo-accent-deep);
+  box-shadow: var(--bo-shadow-md);
+}
+.home-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--bo-ink);
+  text-decoration: none;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--bo-ink-faint);
+  font-size: 15px;
+  font-weight: 500;
+}
+.home-join {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 26px;
+  border: 1px solid var(--bo-line-strong);
+  border-radius: 7px;
+  background: rgb(255 253 248 / 0.58);
+}
+.home-join-copy {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.home-friends-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  color: var(--bo-accent);
+}
+.home-join h2 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.home-join p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--bo-ink-faint);
+}
 .home-join-form {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.home-join-label {
-  font-size: var(--bo-text-sm);
-  font-weight: 700;
-  color: var(--bo-ink-soft);
-}
-
-.home-join-row {
-  display: flex;
   gap: 10px;
 }
-
-.home-join-input {
-  flex: 1;
+.home-join-form input {
+  width: 205px;
   min-width: 0;
-  padding: 11px 14px;
-  font-size: var(--bo-text-base);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  font-variant-numeric: tabular-nums;
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--bo-line-strong);
+  background: var(--bo-surface);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
   text-transform: uppercase;
-  border: 1.5px solid var(--bo-line-strong);
-  border-radius: var(--bo-radius);
-  background: var(--bo-sunk);
+  letter-spacing: 0.05em;
   color: var(--bo-ink);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-
-.home-join-input::placeholder {
+.home-join-form input::placeholder {
   color: var(--bo-ink-faint);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
+}
+.home-join-form button {
+  padding-inline: 26px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.home-catalogue {
+  padding-top: 36px;
+  scroll-margin-top: 24px;
+}
+.home-catalogue-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.home-catalogue-heading h2 {
+  margin: 0 0 6px;
+  font-family: var(--bo-serif);
+  font-size: 26px;
+  letter-spacing: -0.04em;
   font-weight: 600;
 }
-
-.home-join-input:focus {
-  outline: none;
-  border-color: var(--bo-accent);
-  box-shadow: 0 0 0 3px var(--bo-accent-wash);
-  background: var(--bo-surface);
-}
-
-.home-join-btn {
-  flex-shrink: 0;
-  border-radius: var(--bo-radius);
-  padding: 0 20px;
-  background: var(--bo-accent);
-  color: #ffffff;
-  font-size: var(--bo-text-md);
-  font-weight: 700;
-  box-shadow: var(--bo-shadow-sm);
-}
-
-.home-error {
+.home-catalogue-heading p {
   margin: 0;
-  text-align: center;
-  color: var(--bo-warn);
-  font-weight: 700;
-  font-size: var(--bo-text-sm);
-  line-height: 1.5;
+  font-size: 14px;
+  color: var(--bo-ink-faint);
 }
-
-/* --- Game grid --- */
-
+.home-modes {
+  display: flex;
+  padding: 4px;
+  border-radius: 30px;
+  border: 1px solid var(--bo-line);
+  background: rgb(255 255 255 / 0.46);
+}
+.home-modes button {
+  background: transparent;
+  border-radius: 24px;
+  color: var(--bo-ink-soft);
+  padding: 0 27px;
+  min-height: 38px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.home-modes button:hover {
+  background: var(--bo-sunk);
+}
+.home-modes button[aria-pressed="true"] {
+  background: var(--bo-accent);
+  color: white;
+  box-shadow: 0 1px 3px #253b2420;
+}
+.home-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--bo-line);
+  margin: 24px 0 20px;
+}
+.home-categories {
+  display: flex;
+  gap: 18px;
+}
+.home-categories button {
+  position: relative;
+  color: var(--bo-ink-faint);
+  background: transparent;
+  padding: 12px 16px;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.home-categories button:hover {
+  color: var(--bo-ink);
+  background: transparent;
+}
+.home-categories button[aria-pressed="true"] {
+  color: var(--bo-accent-deep);
+  font-weight: 700;
+}
+.home-categories button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  height: 3px;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  background: var(--bo-accent);
+}
+.home-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--bo-ink-faint);
+  padding-bottom: 8px;
+}
+.home-difficulty select {
+  width: 102px;
+  min-height: 34px;
+}
+.home-mode-note {
+  font-size: 13px;
+  color: var(--bo-ink-faint);
+}
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  /* Each card is its own height. Stretching them to match meant one card with
-     an extra setup row punched an empty gap into every card beside it. */
-  align-items: start;
-  gap: 18px;
-  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px 20px;
 }
-
-@keyframes home-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .home-card {
-  background: var(--bo-surface);
+  overflow: hidden;
   border: 1px solid var(--bo-line);
-  border-radius: var(--bo-radius-lg);
-  padding: 18px;
+  border-radius: 9px;
+  background: rgb(255 253 248 / 0.8);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: var(--bo-shadow-sm);
-  opacity: 0;
-  animation: home-card-in 0.5s ease-out forwards;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
 }
-
 .home-card:hover {
-  box-shadow: var(--bo-shadow-md);
-  border-color: var(--bo-line-strong);
+  transform: translateY(-3px);
+  border-color: #bcbfaf;
+  box-shadow: 0 10px 24px #3d35250c;
 }
-
-.home-card:hover .home-motif-svg {
-  transform: scale(1.06);
+.home-card-photo {
+  width: 100%;
+  aspect-ratio: 2.45;
+  background-image: url("/art/game-atlas.webp");
+  background-size: 300% auto;
+  background-repeat: no-repeat;
 }
-
-/* Name and board sit on one line: the motif is the game's label, not a banner. */
-.home-card-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.home-card-motif {
-  flex: none;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--bo-radius);
-  background: linear-gradient(135deg, #f6efdd, #ead9b3);
-  border: 1px solid #e3d3ab;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6);
-}
-
-.home-motif-svg {
-  width: 40px;
-  height: 40px;
-  display: block;
-  transition: transform 0.2s ease;
-}
-
 .home-card-body {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  flex: 1;
+  padding: 17px 20px 15px;
 }
-
-.home-card-title {
-  margin: 0;
-  font-size: var(--bo-text-lg);
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.home-card h3 {
+  font-family: var(--bo-serif);
+  font-size: 23px;
+  font-weight: 600;
+  margin: 0 0 7px;
+  letter-spacing: -0.035em;
+}
+.home-card-description {
+  margin: 0 0 15px;
+  color: var(--bo-ink-faint);
+  font-size: 13px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+.home-card-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.home-card-bottom > span {
+  font-size: 12px;
+  color: var(--bo-ink-faint);
+}
+.home-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: transparent;
+  color: var(--bo-accent-deep);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+  padding: 2px 0 2px 8px;
+  white-space: nowrap;
+}
+.home-card-action:hover:not(:disabled) {
+  background: transparent;
   color: var(--bo-ink);
 }
-
-.home-card-players {
-  color: var(--bo-ink-faint);
-  font-size: var(--bo-text-xs);
-  font-weight: 700;
-}
-
-/*
- * Three ways to start, in the order people pick them, each at its own weight:
- * a filled button to invite a friend, an outlined pair to play the computer,
- * and a quiet line for handing one screen back and forth.
- */
-.home-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.home-card-primary {
-  width: 100%;
-  border-radius: var(--bo-radius);
-  background: var(--bo-accent);
-  color: #ffffff;
-  font-size: var(--bo-text-md);
-  font-weight: 700;
-  box-shadow: var(--bo-shadow-sm);
-}
-
-.home-card-primary:disabled {
-  box-shadow: none;
-}
-
-.home-card-local {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--bo-control-h-sm);
-  text-align: center;
-  padding: 0 8px;
-  border-radius: var(--bo-radius-sm);
-  color: var(--bo-ink-faint);
-  font-weight: 700;
-  font-size: var(--bo-text-sm);
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.home-card-local:hover {
-  background: var(--bo-sunk);
-  color: var(--bo-ink-soft);
-}
-
-/* --- Footer --- */
-
-.home-footer {
-  color: var(--bo-ink-faint);
-  font-size: var(--bo-text-sm);
-  text-align: center;
-  margin-top: 4px;
-}
-
-.home-footer p {
-  margin: 0;
-}
-
-/* --- Responsive --- */
-
-@media (max-width: 480px) {
-  .home-page {
-    padding: 24px 16px 40px;
-    gap: 24px;
-  }
-
-  .home-join {
-    padding: 16px;
-  }
-
-  .home-card {
-    padding: 16px;
-  }
-}
-
-/* --- Motion --- */
-
-@media (prefers-reduced-motion: reduce) {
-  .home-card {
-    animation: none;
-    opacity: 1;
-  }
-
-  .home-card,
-  .home-card-primary,
-  .home-card-ai,
-  .home-join-btn,
-  .home-motif-svg {
-    transition: none;
-  }
-}
-
 .home-card-setup {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 7px 8px 7px 12px;
-  border-radius: var(--bo-radius-sm);
-  background: var(--bo-sunk);
-  font-size: var(--bo-text-xs);
-  font-weight: 700;
+  gap: 10px;
+  font-size: 12px;
   color: var(--bo-ink-faint);
+  padding-bottom: 8px;
 }
-
 .home-card-setup select {
-  flex: 0 1 auto;
-  height: var(--bo-control-h-sm);
-  appearance: none;
-  -webkit-appearance: none;
-  border: 1px solid var(--bo-line-strong);
-  border-radius: var(--bo-radius-sm);
-  background: var(--bo-surface) var(--bo-chevron) no-repeat right 8px center / 11px 7px;
-  font: inherit;
-  font-size: var(--bo-text-sm);
-  color: var(--bo-ink);
-  padding: 0 24px 0 10px;
-  cursor: pointer;
+  min-height: 30px;
+  font-size: 12px;
+  max-width: 72%;
+  padding-block: 3px;
 }
-
-/* Playing the computer is one decision with two parts, so it is one control. */
-.home-card-ai {
-  display: flex;
-  align-items: stretch;
-  height: var(--bo-control-h);
-  border: 1.5px solid var(--bo-line-strong);
-  border-radius: var(--bo-radius);
-  background: var(--bo-surface);
-  transition: border-color 0.15s ease;
+.home-error {
+  color: var(--bo-warn);
+  background: #fff0ec;
+  border: 1px solid #e2c4bc;
+  padding: 15px;
+  border-radius: 6px;
+  font-size: 14px;
 }
-
-.home-card-ai:hover {
-  border-color: #b58863;
-}
-
-.home-card-ai-link {
-  flex: 1;
-  min-width: 0;
+.home-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: calc(var(--bo-radius) - 2px) 0 0 calc(var(--bo-radius) - 2px);
-  color: var(--bo-ink-soft);
-  font-weight: 700;
-  font-size: var(--bo-text-sm);
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 44px;
+  padding: 25px 0 30px;
+  border-top: 1px solid var(--bo-line);
+  font-size: 12px;
+  color: var(--bo-ink-faint);
 }
-
-.home-card-ai-link:hover {
-  background: var(--bo-sunk);
+.home-footer > span:first-child {
+  font-family: var(--bo-serif);
+  font-size: 17px;
   color: var(--bo-ink);
 }
-
-.home-card-ai-level {
-  flex: 0 0 auto;
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  border-left: 1px solid var(--bo-line);
-  border-radius: 0 calc(var(--bo-radius) - 2px) calc(var(--bo-radius) - 2px) 0;
-  background: var(--bo-sunk) var(--bo-chevron) no-repeat right 9px center / 11px 7px;
-  font: inherit;
-  font-size: var(--bo-text-sm);
-  font-weight: 700;
-  color: var(--bo-ink-soft);
-  padding: 0 24px 0 11px;
-  cursor: pointer;
+.home-footer p {
+  margin: 0;
+}
+@media (min-width: 1450px) {
+  .home-hero {
+    min-height: 460px;
+  }
+}
+@media (max-width: 960px) {
+  .home-hero {
+    min-height: 390px;
+  }
+  .home-hero h1 {
+    font-size: 44px;
+  }
+  .home-hero-copy {
+    padding-left: 0;
+  }
+  .home-modes button {
+    padding-inline: 16px;
+  }
+  .home-catalogue-heading h2 {
+    font-size: 23px;
+  }
+  .home-join {
+    padding: 18px;
+  }
+  .home-join-copy {
+    gap: 14px;
+  }
+  .home-join-form input {
+    width: 160px;
+  }
+  .home-card-body {
+    padding: 16px;
+  }
+  .home-card h3 {
+    font-size: 20px;
+  }
+}
+@media (max-width: 740px) {
+  .home-page {
+    padding: 0 20px;
+  }
+  .home-hero {
+    min-height: 610px;
+    align-items: flex-start;
+  }
+  .home-hero-copy {
+    padding: 35px 0 0;
+  }
+  .home-hero h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+  }
+  .home-hero-copy > p {
+    font-size: 15px;
+  }
+  .home-hero-actions {
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .home-hero-primary {
+    padding: 0 22px;
+    min-height: 48px;
+    font-size: 14px;
+  }
+  .home-text-link {
+    font-size: 14px;
+  }
+  .home-hero-image {
+    inset: 285px -20px 0 0;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 16%,
+      #000 85%,
+      transparent
+    );
+  }
+  .home-hero-image img {
+    object-position: center 68%;
+    mask-image: none;
+  }
+  .home-join {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+  .home-join-form input {
+    flex: 1;
+    width: 0;
+  }
+  .home-catalogue-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .home-modes {
+    align-self: flex-start;
+  }
+  .home-modes button {
+    padding-inline: 24px;
+  }
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .home-categories {
+    gap: 4px;
+  }
+  .home-categories button {
+    padding-inline: 12px;
+  }
+  .home-difficulty {
+    gap: 6px;
+  }
+  .home-difficulty select {
+    width: 84px;
+  }
+  .home-filters {
+    margin-top: 16px;
+  }
+  .home-card-photo {
+    aspect-ratio: 1.8;
+  }
+  .home-footer {
+    flex-wrap: wrap;
+  }
+  .home-footer > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-card-photo {
+    aspect-ratio: 2.3;
+  }
+  .home-card-body {
+    padding: 18px 20px;
+  }
+  .home-card h3 {
+    font-size: 23px;
+  }
+  .home-card-description {
+    font-size: 14px;
+  }
+  .home-categories button {
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+  .home-difficulty {
+    font-size: 12px;
+  }
+  .home-difficulty select {
+    width: 75px;
+    font-size: 12px;
+  }
+  .home-mode-note {
+    font-size: 11px;
+  }
+  .home-modes {
+    width: 100%;
+  }
+  .home-modes button {
+    flex: 1;
+    padding-inline: 12px;
+  }
+  .home-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-card,
+  .home-hero-primary {
+    transition: none;
+  }
+  .home-card:hover {
+    transform: none;
+  }
 }
 
-/* The wrapper's :focus-within ring cannot say which of the two halves has
-   focus, so each half keeps its own. */
-.home-card-ai:focus-within {
-  border-color: var(--bo-accent);
-}
+.home-card-photo--gonu { background-image: url("/art/ash-wood.webp"); background-size: cover; overflow: hidden; }
+.home-card-photo--gonu svg { display: block; }

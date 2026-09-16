@@ -53,6 +53,14 @@ export interface Line {
   y2: number;
 }
 
+/** Semantic board feedback; derived from the same rules used to validate moves. */
+export interface BoardFeedback {
+  kind: "check" | "win";
+  label: string;
+  positions: Pos[];
+  lines?: Line[];
+}
+
 export interface GameMeta {
   id: GameId;
   nameKo: string;
@@ -102,6 +110,7 @@ export interface GameEngine<TState extends BaseState = BaseState, TMove = Move> 
   /** `rng` is supplied by the server for games with chance; defaults to Math.random. */
   applyMove(state: TState, move: TMove, player: PlayerIndex, rng?: Rng): ApplyResult<TState>;
   pieces(state: TState): BoardPiece[];
+  feedback?(state: TState): BoardFeedback | null;
 }
 
 export function posEq(a: Pos, b: Pos): boolean {

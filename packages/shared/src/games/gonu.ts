@@ -13,28 +13,14 @@ import type {
 import { posEq } from "../types.js";
 
 /**
- * 우물고누 (Umul-gonu / "Well Gonu") — internationally catalogued as Pong Hau
- * K'i. This is the smallest, most widely-known member of the 고누 family.
+ * 우물고누: each side starts with two adjacent stones facing the other side.
+ * The left side TL–BL is the impassable well; the centre is an ordinary point.
+ * On the opening ply ONLY, the stone beside the well cannot move into the
+ * centre: it would trap the opponent before they have had a turn.
+ * Reference: 한국민족문화대백과사전, 고누 / 우물고누
+ * https://encykorea.aks.ac.kr/Article/E0003367
  *
- * Board (5 points, 7 edges): four outer points arranged as a square —
- * TL, TR, BR, BL — plus a center point C. Lines join TL-TR, TR-BR, BR-BL
- * (three of the square's four sides), and all four spokes TL-C, TR-C, BR-C,
- * BL-C. The fourth side, BL-TL, is deliberately left undrawn: that gap is
- * the "우물" (well) the board is named for, and stones may never cross it
- * directly — they can only reach the far side by going through the center.
- *
- * Each player has 2 stones and starts on a diagonal pair of outer points
- * (player 0 / 흑: TL + BR, player 1 / 백: TR + BL), leaving the center
- * empty. Since there are always exactly 4 stones on 5 points, exactly one
- * point is empty at any time. On your turn you must slide one of your own
- * stones, along a line, into that single empty point — so a stone can move
- * only if it currently sits next to the empty point. If none of your
- * stones do, you have no legal move and lose immediately.
- *
- * This is the classic "가두기 고누" (trapping gonu): with careful play
- * (mirroring the opponent) neither side can be forced into a trap and the
- * game can in principle continue forever, so we cap the game length — see
- * PLY_CAP below — and call it a draw past that point.
+ * The 60-ply draw is this app's house rule, not a traditional winning rule.
  */
 
 export type PointId = "TL" | "TR" | "BR" | "BL" | "C";
@@ -59,16 +45,12 @@ export const EDGES: Record<PointId, PointId[]> = {
   C: ["TL", "TR", "BR", "BL"],
 };
 
-/** The 7 edges above, as board-coordinate line segments for the renderer. */
-const EDGE_LINES: Line[] = [
-  { x1: 0, y1: 0, x2: 2, y2: 0 }, // TL-TR
-  { x1: 2, y1: 0, x2: 2, y2: 2 }, // TR-BR
-  { x1: 2, y1: 2, x2: 0, y2: 2 }, // BR-BL
-  { x1: 0, y1: 0, x2: 1, y2: 1 }, // TL-C
-  { x1: 2, y1: 0, x2: 1, y2: 1 }, // TR-C
-  { x1: 2, y1: 2, x2: 1, y2: 1 }, // BR-C
-  { x1: 0, y1: 2, x2: 1, y2: 1 }, // BL-C
-];
+/** Draw exactly the same seven connections that the move validator uses. */
+export const GONU_LINES: Line[] = POINT_IDS.flatMap((from, index) =>
+  EDGES[from]
+    .filter((to) => POINT_IDS.indexOf(to) > index)
+    .map((to) => ({ x1: POINTS[from].x, y1: POINTS[from].y, x2: POINTS[to].x, y2: POINTS[to].y })),
+);
 
 /**
  * With 5 points and exactly 4 stones (1 empty), there are at most
@@ -101,12 +83,12 @@ function pointIdAt(pos: Pos): PointId | null {
   return null;
 }
 
-function legalMovesFor(board: GonuBoardMap, player: PlayerIndex): Move[] {
+function legalMovesFor(board: GonuBoardMap, player: PlayerIndex, opening = false): Move[] {
   const empty = emptyPointId(board);
   if (empty === null) return [];
   const moves: Move[] = [];
   for (const neighbor of EDGES[empty]) {
-    if (board[neighbor] === player) {
+    if (board[neighbor] === player && !(opening && (neighbor === "TL" || neighbor === "BL"))) {
       moves.push({ from: POINTS[neighbor], to: POINTS[empty] });
     }
   }
@@ -114,18 +96,18 @@ function legalMovesFor(board: GonuBoardMap, player: PlayerIndex): Move[] {
 }
 
 function initialBoard(): GonuBoardMap {
-  return { TL: 0, BR: 0, TR: 1, BL: 1, C: null };
+  return { TL: 1, TR: 1, BR: 0, BL: 0, C: null };
 }
 
 export const gonuEngine: GameEngine<GonuState, Move> = {
   meta: {
     id: "gonu",
     nameKo: "고누",
-    width: 2,
-    height: 2,
+    width: 3,
+    height: 3,
     gridStyle: "intersection",
     playerLabels: ["흑", "백"],
-    decorations: EDGE_LINES,
+    decorations: GONU_LINES,
     renderer: "gonu",
   },
 
@@ -143,7 +125,7 @@ export const gonuEngine: GameEngine<GonuState, Move> = {
 
   legalMoves(state, player): Move[] {
     if (state.status !== "ongoing" || state.turn !== player) return [];
-    return legalMovesFor(state.board, player);
+    return legalMovesFor(state.board, player, state.plies === 0);
   },
 
   applyMove(state, move, player): ApplyResult<GonuState> {
@@ -158,7 +140,11 @@ export const gonuEngine: GameEngine<GonuState, Move> = {
       return { ok: false, state, error: "이동할 말을 지정해야 합니다.", status: current };
     }
 
-    const legal = legalMovesFor(state.board, player);
+    const fromPoint = pointIdAt(move.from);
+    if (state.plies === 0 && (fromPoint === "TL" || fromPoint === "BL") && state.board[fromPoint] === player) {
+      return { ok: false, state, error: "첫 수에는 우물 옆의 말을 움직일 수 없습니다.", status: current };
+    }
+    const legal = legalMovesFor(state.board, player, state.plies === 0);
     const match = legal.find((m) => m.from && posEq(m.from, move.from!) && posEq(m.to, move.to));
     if (!match) {
       return { ok: false, state, error: "둘 수 없는 이동입니다.", status: current };

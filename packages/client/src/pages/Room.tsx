@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { getEngine, type GameId, type Move, type PlayerIndex } from "@board-online/shared";
 import { emitAck, socket } from "../lib/socket.js";
 import { getSeatToken, setSeatToken } from "../lib/storage.js";
 import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
-import SoundToggle from "../components/SoundToggle.js";
-import PageBar from "../components/PageBar.js";
+import MatchLayout from "../components/MatchLayout.js";
 
 interface RoomData {
   gameId: GameId;
@@ -83,13 +82,12 @@ export default function Room() {
   if (error) {
     return (
       <div className="page">
-        <PageBar title="방에 들어가지 못했어요" />
-        <p className="error-text">{error}</p>
-        <div className="toolbar">
-          <div className="toolbar-group">
-            <button onClick={syncRoom}>다시 시도</button>
-          </div>
-        </div>
+        <p className="status-text">방 {code}에 들어가지 못했어요</p>
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+        <button onClick={syncRoom}>다시 시도</button>
+        <Link to="/">게임 목록으로</Link>
       </div>
     );
   }
@@ -97,10 +95,10 @@ export default function Room() {
   if (!roomData || you === null) {
     return (
       <div className="page">
-        <PageBar title={code} mode="연결하는 중" />
         <p className="status-text" aria-live="polite">
-          방에 연결하는 중...
+          방 {code}에 연결하는 중...
         </p>
+        <Link to="/">게임 목록으로</Link>
       </div>
     );
   }
@@ -114,6 +112,17 @@ export default function Room() {
   const opponent = roomData.players.find((p) => p.index !== you);
   const waitingForOpponent = roomData.players.length < 2;
 
+  let statusText: string;
+  if (status.status !== "ongoing") {
+    statusText = "";
+  } else if (waitingForOpponent) {
+    statusText = "친구를 기다리는 중...";
+  } else if (!opponent?.connected) {
+    statusText = "친구 연결이 끊겼어요. 잠시만 기다려 주세요.";
+  } else {
+    statusText = myTurn ? "내 차례" : "친구 차례";
+  }
+
   let resultKind: ResultKind = "draw";
   let resultTitle = "";
   if (status.status === "win") {
@@ -124,74 +133,16 @@ export default function Room() {
     resultTitle = "비겼어요";
   }
 
-  let statusText: string;
-  if (status.status !== "ongoing") {
-    statusText = resultTitle;
-  } else if (waitingForOpponent) {
-    statusText = "친구를 기다리는 중...";
-  } else if (!opponent?.connected) {
-    statusText = "친구 연결이 끊겼어요. 잠시만 기다려 주세요.";
-  } else {
-    statusText = myTurn ? "내 차례" : "친구 차례";
-  }
-
-  return (
-    <div className="page room-page">
-      <PageBar title={engine.meta.nameKo} mode="친구와 대전">
-        <div className="room-code-box">
-          <span>방 코드</span>
-          <strong>{code}</strong>
-          <button onClick={handleCopyLink}>{copied ? "복사됨" : "초대 링크 복사"}</button>
-        </div>
-      </PageBar>
-
-      <div className="toolbar">
-        <div className="toolbar-group">
-          <button className="secondary-btn" onClick={() => setShowRules(true)}>
-            규칙
-          </button>
-          <SoundToggle />
-          {status.status !== "ongoing" && resultDismissed && (
-            <button className="rematch-btn" onClick={handleRematch}>
-              다시 하기
-            </button>
-          )}
-        </div>
-      </div>
-
-      <p className="you-label">
-        나는 <strong>{engine.meta.playerLabels[you]}</strong>입니다
-      </p>
-      {statusText && (
-        <p className="status-text" aria-live="polite">
-          {statusText}
-        </p>
-      )}
-      {moveError && <p className="error-text">{moveError}</p>}
-
-      <div className="board-wrap">
-        <GameView
-          engine={engine}
-          state={roomData.state}
-          pieces={pieces}
-          legalMoves={legalMoves}
-          onMove={handleMove}
-          interactive={myTurn && !!opponent?.connected}
-          you={you}
-        />
-      </div>
-
-      <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={roomData.gameId} />
-      <ResultModal
-        open={status.status !== "ongoing" && !resultDismissed}
-        kind={resultKind}
-        title={resultTitle}
-        subtitle={status.reason}
-        onRematch={handleRematch}
-        onClose={() => setResultDismissed(true)}
-      />
-    </div>
-  );
+  return <>
+    <MatchLayout meta={engine.meta} status={status.status === "ongoing" ? statusText : resultTitle} onRules={() => setShowRules(true)}
+      details={<><p>나는 {engine.meta.playerLabels[you]}</p><div className="room-code-box"><span>방 코드</span><strong>{code}</strong><button onClick={handleCopyLink}>{copied ? "복사됨" : "초대 링크 복사"}</button></div>{status.status !== "ongoing" && resultDismissed && <button className="rematch-btn" onClick={handleRematch}>다시 하기</button>}</>}
+      result={<ResultModal open={status.status !== "ongoing" && !resultDismissed} kind={resultKind} title={resultTitle} subtitle={status.reason} onRematch={handleRematch} onClose={() => setResultDismissed(true)} />}>
+      {waitingForOpponent && <div className="match-invite"><span>방 코드 <strong>{code}</strong></span><button className="secondary-btn" onClick={handleCopyLink}>{copied ? "복사됨" : "초대 링크 복사"}</button></div>}
+      {moveError && <p className="error-text" role="alert">{moveError}</p>}
+      <GameView engine={engine} state={roomData.state} pieces={pieces} legalMoves={legalMoves} onMove={handleMove} interactive={myTurn && !!opponent?.connected} you={you} />
+    </MatchLayout>
+    <RulesModal open={showRules} onClose={() => setShowRules(false)} gameId={roomData.gameId} />
+  </>;
 }
 
 function engineStatusKey(roomData: RoomData): string {

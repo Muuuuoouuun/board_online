@@ -1,0 +1,342 @@
+.play-page {
+  max-width: 1168px;
+  padding: 0 24px;
+  margin: 0 auto;
+}
+.play-main {
+  padding-top: 28px;
+}
+.play-heading {
+  margin-bottom: 26px;
+}
+.play-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--bo-ink-faint);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.play-back:hover {
+  color: var(--bo-ink);
+}
+.play-heading h1 {
+  font-family: var(--bo-serif);
+  font-size: 46px;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  margin: 0 0 8px;
+}
+.play-heading > p {
+  font-size: 15px;
+  color: var(--bo-ink-faint);
+  margin: 0;
+}
+.play-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  align-items: start;
+  gap: 28px;
+}
+.play-layout .play-board {
+  max-width: none;
+}
+.play-board .board-svg {
+  border-radius: 5px;
+  box-shadow:
+    0 18px 30px -14px #3b2b2352,
+    0 2px 5px #3b2b2326;
+}
+.play-panel {
+  border: 1px solid var(--bo-line);
+  border-radius: 9px;
+  padding: 26px 24px 22px;
+  background: rgb(255 253 248 / 0.72);
+  min-width: 0;
+}
+.play-panel h2 {
+  margin: 0 0 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--bo-line);
+  font-family: var(--bo-serif);
+  font-size: 27px;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+}
+.play-players {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.play-player {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 78px;
+  border: 1px solid var(--bo-line);
+  border-radius: 6px;
+  padding: 12px;
+}
+.play-player.is-active {
+  border-color: var(--bo-accent);
+  box-shadow: inset 0 0 0 0.5px var(--bo-accent);
+  background: rgb(61 81 65 / 0.025);
+}
+.player-stone {
+  display: block;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 25%,
+    #64665f,
+    #30312d 35%,
+    #171916 78%
+  );
+  box-shadow:
+    inset 0 1px 1px #ffffff38,
+    1px 3px 4px #1d1d1930;
+}
+.player-stone--light {
+  background: radial-gradient(circle at 32% 25%, #fffefa, #eeeae1 45%, #bcb4a6);
+  box-shadow:
+    inset 0 1px 1px #fff,
+    1px 3px 5px #1d1d1920;
+}
+.play-player > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.play-player strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.play-player div > span {
+  font-size: 11px;
+  color: var(--bo-ink-faint);
+}
+.player-turn-dot {
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bo-accent);
+  flex: none;
+}
+.play-status {
+  margin: 25px 0;
+}
+.play-status p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 9px;
+}
+.play-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bo-accent);
+  flex: none;
+}
+.play-status > span {
+  display: block;
+  color: var(--bo-ink-faint);
+  font-size: 12px;
+  line-height: 1.7;
+  padding-left: 19px;
+  word-break: keep-all;
+}
+.play-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.play-setting select {
+  min-height: 42px;
+  width: 100%;
+}
+.play-setting small {
+  color: var(--bo-ink-faint);
+  font-size: 11px;
+}
+.play-local-note {
+  padding: 16px 0 20px;
+  border-top: 1px solid var(--bo-line);
+  color: var(--bo-ink-soft);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.play-local-note > span {
+  font-weight: 600;
+}
+.play-local-note p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--bo-ink-faint);
+  word-break: keep-all;
+}
+.play-utilities {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 10px;
+  border-top: 1px solid var(--bo-line);
+  padding-top: 20px;
+}
+.play-utilities button {
+  justify-content: center;
+  min-height: 42px;
+  font-size: 13px;
+  padding: 0 7px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.play-hint {
+  margin: 22px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--bo-line);
+  color: var(--bo-ink-faint);
+  font-size: 12px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+.play-footer {
+  text-align: center;
+  color: var(--bo-ink-faint);
+  font-size: 12px;
+  margin: 35px 0;
+}
+.play-mobile-status {
+  display: none;
+}
+@media (max-width: 900px) {
+  .play-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 20px;
+  }
+  .play-panel {
+    padding: 20px 16px;
+  }
+}
+@media (max-width: 700px) {
+  .play-page {
+    padding: 0 16px;
+  }
+  .play-main {
+    padding-top: 22px;
+  }
+  .play-heading {
+    margin-bottom: 18px;
+  }
+  .play-heading h1 {
+    font-size: 35px;
+  }
+  .play-heading > p {
+    font-size: 13px;
+  }
+  .play-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .play-mobile-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    color: var(--bo-accent-deep);
+    font-weight: 600;
+  }
+  .play-mobile-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--bo-accent);
+    border-radius: 50%;
+  }
+  .play-panel {
+    padding: 22px;
+  }
+  .play-panel h2 {
+    font-size: 24px;
+  }
+  .play-players {
+    flex-direction: row;
+  }
+  .play-player {
+    flex: 1;
+    gap: 10px;
+    padding: 10px;
+  }
+  .player-stone {
+    width: 28px;
+    height: 28px;
+  }
+  .play-player div > span {
+    font-size: 10px;
+  }
+  .player-turn-dot {
+    display: none;
+  }
+  .play-footer {
+    font-size: 11px;
+  }
+}
+/* Match the actual sides used by each game's engine. */
+.play-page[data-game="janggi"] .player-stone {
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #0b6e4f;
+  background: url("/art/ash-wood.webp") center / cover;
+  border: 2px solid #b69c78;
+  font-family: var(--bo-serif);
+  font-size: 22px;
+  font-weight: 600;
+}
+.play-page[data-game="janggi"] .player-stone[data-owner="1"] {
+  color: #b3261e;
+}
+.play-page:is([data-game="territory"], [data-game="flick"])
+  .player-stone[data-owner="0"] {
+  background: radial-gradient(circle at 32% 25%, #8ca2ca, #456294 45%, #283e64);
+}
+.play-page[data-game="territory"] .player-stone[data-owner="1"] {
+  background: radial-gradient(circle at 32% 25%, #d48e7c, #aa5343 45%, #713327);
+}
+.play-page[data-game="flick"] .player-stone[data-owner="1"] {
+  background: radial-gradient(circle at 32% 25%, #e2b688, #c87b41 45%, #8b4927);
+}
+
+.play-page[data-game="gonu"] .play-layout {
+  grid-template-columns: minmax(0, 600px) 330px;
+  justify-content: center;
+}
+.play-page[data-game="gonu"] .board-svg { --bo-board-focus: #456346; }
+.play-page[data-game="gonu"] .board-hit:focus-visible {
+  outline: none;
+  stroke: #456346;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.play-page[data-game="janggi"] .player-stone {
+  background: radial-gradient(circle at 30% 20%, #fffdf0, #f4ecd5 55%, #dfceaa);
+  border: 1px solid #c5b491;
+  box-shadow: 0 2px 0 #bba17b, 1px 3px 4px #1d1d1920;
+  color: #146448;
+}
+.play-page[data-game="janggi"] .player-stone[data-owner="1"] { color: #af352c; }
+@media (min-width: 701px) and (max-width: 900px) {
+  .play-page[data-game="gonu"] .play-layout { grid-template-columns: minmax(0, 1fr) 260px; }
+}
+@media (max-width: 700px) {
+  .play-page[data-game="gonu"] .play-layout { grid-template-columns: minmax(0, 1fr); }
+}

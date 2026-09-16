@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import type { BoardPiece, GameMeta, Move, Pos } from "@board-online/shared";
+import type { BoardFeedback, BoardPiece, GameMeta, Move, Pos } from "@board-online/shared";
 import { posEq } from "@board-online/shared";
 import { posKey, usePieceAnimations } from "../lib/usePieceAnimations.js";
 import { playSound } from "../lib/sound.js";
@@ -7,6 +7,7 @@ import PieceArt, { PieceDefs } from "./PieceArt.js";
 
 interface BoardProps {
   meta: GameMeta;
+  feedback?: BoardFeedback | null;
   pieces: BoardPiece[];
   legalMoves: Move[];
   onMove: (move: Move) => void;
@@ -14,7 +15,7 @@ interface BoardProps {
 }
 
 const CELL = 44;
-const FRAME = 10;
+const FRAME = 16;
 
 type BoardTheme =
   | { kind: "flat"; surface: string; line: string; edge: string }
@@ -42,12 +43,12 @@ const GOMOKU_STARS: Pos[] = [
   { x: 7, y: 7 },
 ];
 
-export default function Board({ meta, pieces, legalMoves, onMove, interactive }: BoardProps) {
+export default function Board({ meta, feedback, pieces, legalMoves, onMove, interactive }: BoardProps) {
   const [selected, setSelected] = useState<Pos | null>(null);
   const anim = usePieceAnimations(pieces);
   const theme = themeFor(meta.id);
   const intersection = meta.gridStyle === "intersection";
-  const pad = intersection ? CELL / 2 : 0;
+  const pad = intersection ? 32 : 0;
   const innerW = intersection ? (meta.width - 1) * CELL + pad * 2 : meta.width * CELL;
   const innerH = intersection ? (meta.height - 1) * CELL + pad * 2 : meta.height * CELL;
   const boardW = innerW + FRAME * 2;
@@ -167,14 +168,14 @@ export default function Board({ meta, pieces, legalMoves, onMove, interactive }:
   return (
     <svg className="board-svg" viewBox={`0 0 ${boardW} ${boardH}`} role="group" aria-label={`${meta.nameKo} 보드`}>
       <defs>
-        <linearGradient id="bo-wood" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#e8c08d" />
-          <stop offset="45%" stopColor="#dcae76" />
-          <stop offset="100%" stopColor="#cf9c62" />
-        </linearGradient>
+        <pattern id="bo-wood" width={boardW} height={boardH} patternUnits="userSpaceOnUse">
+          <rect width={boardW} height={boardH} fill="#d9b780" />
+          <image href="/art/ash-wood.webp" width={boardW} height={boardH} preserveAspectRatio="xMidYMid slice" />
+        </pattern>
         <linearGradient id="bo-frame" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a9763f" />
-          <stop offset="100%" stopColor="#7d5227" />
+          <stop offset="0%" stopColor="#a18162" />
+          <stop offset="35%" stopColor="#856649" />
+          <stop offset="100%" stopColor="#6a4e35" />
         </linearGradient>
         <radialGradient id="bo-felt" cx="0.5" cy="0.4" r="0.8">
           <stop offset="0%" stopColor="#3b7d5d" />
@@ -184,6 +185,8 @@ export default function Board({ meta, pieces, legalMoves, onMove, interactive }:
       </defs>
 
       <rect x={0} y={0} width={boardW} height={boardH} rx={8} fill="url(#bo-frame)" />
+      <rect x={2} y={2} width={boardW - 4} height={boardH - 4} rx={6} fill="none" stroke="#f3e4c4" strokeOpacity=".3" />
+      <rect x={FRAME - 2} y={FRAME - 2} width={innerW + 4} height={innerH + 4} fill="none" stroke="#3b2a1d" strokeOpacity=".5" strokeWidth={2} />
 
       {theme.kind === "checker" && (
         <>
@@ -203,6 +206,11 @@ export default function Board({ meta, pieces, legalMoves, onMove, interactive }:
       {theme.kind !== "checker" && (
         <rect x={FRAME} y={FRAME} width={innerW} height={innerH} fill={theme.surface} />
       )}
+      {theme.kind === "checker" && <image href="/art/ash-wood.webp" x={FRAME} y={FRAME} width={innerW} height={innerH} opacity=".17" preserveAspectRatio="none" pointerEvents="none" />}
+      {intersection && <g fill="#604c35" fontSize="10" fontFamily="Georgia, serif" textAnchor="middle" pointerEvents="none">
+        {Array.from({ length: meta.width }, (_, x) => <text key={`col-${x}`} x={FRAME + pad + x * CELL} y={FRAME + 15}>{String.fromCharCode(65 + x)}</text>)}
+        {Array.from({ length: meta.height }, (_, y) => <text key={`row-${y}`} x={FRAME + 12} y={FRAME + pad + y * CELL + 3}>{meta.height - y}</text>)}
+      </g>}
 
       {theme.kind === "flat" &&
         squares.map(({ x, y }) => (
@@ -291,7 +299,7 @@ export default function Board({ meta, pieces, legalMoves, onMove, interactive }:
       })}
 
       {/* legal destination markers */}
-      {interactive &&
+      {interactive && meta.id !== "gomoku" &&
         destinations.map((d, i) => {
           const { cx, cy } = toPx(d);
           const occupied = pieces.some((p) => posEq(p.pos, d));
@@ -318,6 +326,17 @@ export default function Board({ meta, pieces, legalMoves, onMove, interactive }:
 
       {anim.ghosts.map((piece) => pieceNode(piece, "ghost"))}
       {pieces.map((piece) => pieceNode(piece, "live"))}
+      {feedback && <g className={`board-feedback board-feedback--${feedback.kind}`} pointerEvents="none" aria-label={feedback.label}>
+        {feedback.lines?.map((line, i) => {
+          const a = toPx({ x: line.x1, y: line.y1 });
+          const b = toPx({ x: line.x2, y: line.y2 });
+          return <line key={i} className="board-win-line" x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy} />;
+        })}
+        {feedback.positions.map((pos) => {
+          const { cx, cy } = toPx(pos);
+          return <circle key={posKey(pos)} className="board-feedback-ring" cx={cx} cy={cy} r={CELL * .46} />;
+        })}
+      </g>}
     </svg>
   );
 }

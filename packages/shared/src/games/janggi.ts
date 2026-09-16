@@ -452,6 +452,16 @@ export const janggiEngine: GameEngine<JanggiState> = {
     return { ok: true, state: nextState, status: { status, winner, reason } };
   },
 
+  feedback(state) {
+    const general = findGeneral(state.board, state.turn);
+    if (!general || !isInCheck(state.board, state.turn)) return null;
+    return {
+      kind: state.status === "win" ? "win" : "check",
+      label: state.status === "win" ? "외통장군" : "장군",
+      positions: [general],
+    };
+  },
+
   pieces(state): BoardPiece[] {
     const out: BoardPiece[] = [];
     for (let y = 0; y < HEIGHT; y++) {

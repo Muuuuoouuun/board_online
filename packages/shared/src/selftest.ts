@@ -4,7 +4,7 @@ import { checkersEngine } from "./games/checkers.js";
 import { chessEngine } from "./games/chess.js";
 import { janggiEngine } from "./games/janggi.js";
 import { flickEngine } from "./games/flick.js";
-import { gonuEngine } from "./games/gonu.js";
+import { gonuEngine, POINTS, POINT_IDS, GONU_LINES, type GonuState } from "./games/gonu.js";
 import { yutEngine } from "./games/yut.js";
 import { territoryEngine } from "./games/territory.js";
 import type { BaseState, GameEngine, Move } from "./types.js";
@@ -42,6 +42,97 @@ function ok(msg: string) {
   }
   assert(state.status === "win" && state.winner === 0, "gomoku: player 0 should win with 5 in a row");
   ok("gomoku 5-in-a-row win detected");
+}
+
+// --- Board feedback is derived from actual positions, including edge diagonals. ---
+{
+  for (const [dx, dy, x, y] of [[1, 0, 0, 0], [0, 1, 14, 0], [1, 1, 0, 0], [1, -1, 0, 14]]) {
+    const state = gomokuEngine.createInitialState();
+    assert(gomokuEngine.feedback!(state) === null, "gomoku: no feedback on an unfinished board");
+    for (let i = 0; i < 5; i++) state.board[y + i * dy][x + i * dx] = 1;
+    state.status = "win"; state.winner = 1;
+    const snapshot = JSON.stringify(state);
+    const feedback = gomokuEngine.feedback!(state)!;
+    assert(feedback.positions.length === 5 && feedback.lines?.length === 1, `gomoku: highlight complete line ${dx},${dy}`);
+    assert(feedback.positions.every(pos => state.board[pos.y][pos.x] === 1), "gomoku: only winning stones are highlighted");
+    assert(JSON.stringify(state) === snapshot, "gomoku: feedback never mutates state");
+    state.status = "draw"; state.winner = null;
+    assert(gomokuEngine.feedback!(state) === null, "gomoku: draws do not have a winning line");
+  }
+  const chess = chessEngine.createInitialState();
+  assert(chessEngine.feedback!(chess) === null, "chess: starting king is not checked");
+  const checked = { ...chess, fen: "4k3/8/8/8/8/8/4R3/4K3 b - - 0 1", turn: 1 as const };
+  assert(chessEngine.feedback!(checked)?.kind === "check", "chess: attacked king is checked");
+  assert(chessEngine.feedback!(checked)?.positions[0].y === 0, "chess: check ring is on the black king");
+  assert(chessEngine.feedback!({ ...checked, status: "draw" }) === null, "chess: a finished draw does not request a defense");
+  const escaped = chessEngine.applyMove(checked, { from: { x: 4, y: 0 }, to: { x: 3, y: 0 } }, 1);
+  assert(escaped.ok && chessEngine.feedback!(escaped.state) === null, "chess: check clears after a legal escape");
+  let mate = chess;
+  for (const [x1, y1, x2, y2] of [[5, 6, 5, 5], [4, 1, 4, 3], [6, 6, 6, 4], [3, 0, 7, 4]]) {
+    const next = chessEngine.applyMove(mate, { from: { x: x1, y: y1 }, to: { x: x2, y: y2 } }, mate.turn);
+    assert(next.ok, "chess: Fool's mate sequence is legal"); mate = next.state;
+  }
+  assert(mate.status === "win" && chessEngine.feedback!(mate)?.label === "체크메이트", "chess: distinguish mate from check");
+  assert(chessEngine.feedback!(mate)?.positions[0].y === 7, "chess: mate highlights the losing king");
+  const janggi = janggiEngine.createInitialState();
+  assert(janggiEngine.feedback!(janggi) === null, "janggi: starting general is safe");
+  janggi.board = Array.from({ length: 10 }, () => Array(9).fill(null));
+  janggi.board[8][4] = { owner: 0, type: "general" };
+  janggi.board[1][4] = { owner: 1, type: "general" };
+  janggi.board[4][4] = { owner: 1, type: "chariot" };
+  assert(janggiEngine.feedback!(janggi)?.label === "장군", "janggi: a chariot attack announces check");
+  const defended = janggiEngine.applyMove(janggi, { from: { x: 4, y: 8 }, to: { x: 3, y: 8 } }, 0);
+  assert(defended.ok && janggiEngine.feedback!(defended.state) === null, "janggi: a legal defense clears check");
+  janggi.board[4][3] = { owner: 1, type: "chariot" };
+  janggi.board[4][5] = { owner: 1, type: "chariot" };
+  assert(janggiEngine.legalMoves(janggi, 0).length === 0, "janggi: the three-file attack is inescapable");
+  janggi.status = "win"; janggi.winner = 1;
+  assert(janggiEngine.feedback!(janggi)?.label === "외통장군", "janggi: an ended check displays mate");
+  ok("board feedback: four gomoku directions, chess check/mate, janggi check/defense/mate verified");
+}
+
+// --- Umul-gonu: facing starts, opening restriction and real trapping rules ---
+{
+  const start = gonuEngine.createInitialState();
+  const snapshot = JSON.stringify(start);
+  assert(start.board.BL === 0 && start.board.BR === 0 && start.board.TL === 1 && start.board.TR === 1 && start.board.C === null,
+    "gonu: each side starts together, facing the other side with the centre empty");
+  const opening = gonuEngine.legalMoves(start, 0);
+  assert(opening.length === 1 && opening[0].from?.x === 2 && opening[0].from?.y === 2 && opening[0].to.x === 1 && opening[0].to.y === 1,
+    "gonu: only the bottom-right black stone may open");
+  assert(!gonuEngine.applyMove(start, { from: POINTS.BL, to: POINTS.C }, 0).ok,
+    "gonu: forbid the opening instant-win move beside the well");
+  assert(gonuEngine.legalMoves(start, 1).length === 0, "gonu: only the current player may move");
+  let current = gonuEngine.applyMove(start, { from: POINTS.BR, to: POINTS.C }, 0);
+  assert(current.ok && current.state.status === "ongoing" && current.state.turn === 1, "gonu: opening gives white a playable turn");
+  current = gonuEngine.applyMove(current.state, { from: POINTS.TR, to: POINTS.BR }, 1);
+  assert(current.ok && current.state.turn === 0, "gonu: white can answer on the right edge");
+  current = gonuEngine.applyMove(current.state, { from: POINTS.C, to: POINTS.TR }, 0);
+  assert(current.ok && current.state.board.C === null, "gonu: centre becomes empty again after the forced continuation");
+  assert(gonuEngine.legalMoves(current.state, 1).some((m) => m.from?.x === 0 && m.from?.y === 0),
+    "gonu: well-adjacent stones may move after the opening ply");
+  assert(gonuEngine.applyMove(current.state, { from: POINTS.TL, to: POINTS.C }, 1).ok,
+    "gonu: the validator also permits a later well-adjacent move");
+  const later: GonuState = { ...start, plies: 4 };
+  const trapped = gonuEngine.applyMove(later, { from: POINTS.BL, to: POINTS.C }, 0);
+  assert(trapped.ok && trapped.state.status === "win" && trapped.state.winner === 0,
+    "gonu: the same trap is a valid win later in the game");
+  assert(gonuEngine.legalMoves(trapped.state, 1).length === 0, "gonu: a finished game exposes no moves");
+  const acrossWell: GonuState = { ...start, plies: 8, board: { TL: null, TR: 1, C: 1, BL: 0, BR: 0 } };
+  assert(!gonuEngine.applyMove(acrossWell, { from: POINTS.BL, to: POINTS.TL }, 0).ok,
+    "gonu: cannot cross the missing left edge");
+  assert(!gonuEngine.applyMove(later, { from: POINTS.BL, to: POINTS.TR }, 0).ok, "gonu: no jumping over the centre or capturing");
+  const capped = gonuEngine.applyMove({ ...start, plies: 59 }, { from: POINTS.BR, to: POINTS.C }, 0);
+  assert(capped.ok && capped.state.status === "draw", "gonu: the service's 60-ply cap still draws");
+  const capWin = gonuEngine.applyMove({ ...start, plies: 59 }, { from: POINTS.BL, to: POINTS.C }, 0);
+  assert(capWin.ok && capWin.state.status === "win", "gonu: a trap at the cap takes priority over a draw");
+  const whiteFirst: GonuState = { ...start, turn: 1 };
+  assert(gonuEngine.legalMoves(whiteFirst, 1).length === 1 && !gonuEngine.applyMove(whiteFirst, { from: POINTS.TL, to: POINTS.C }, 1).ok,
+    "gonu: the opening restriction is symmetric if white starts");
+  assert(JSON.stringify(start) === snapshot, "gonu: moves never mutate the input state");
+  assert(GONU_LINES.length === 7 && !GONU_LINES.some((l) => l.x1 === 0 && l.x2 === 0), "gonu: the drawing has exactly seven paths and no path across the well");
+  for (const id of POINT_IDS) assert(POINTS[id].x < gonuEngine.meta.width && POINTS[id].y < gonuEngine.meta.height, "gonu: point fits advertised board dimensions");
+  ok("gonu facing setup, opening restriction, well, trap, draw and immutability verified");
 }
 
 // --- Reversi: opening move flips exactly one disc, and legal move count is 4 ---
