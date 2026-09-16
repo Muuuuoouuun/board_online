@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getEngine, type GameId, type Move, type PlayerIndex } from "@board-online/shared";
 import { emitAck, socket } from "../lib/socket.js";
 import { getSeatToken, setSeatToken } from "../lib/storage.js";
@@ -88,9 +88,6 @@ export default function Room() {
         <div className="toolbar">
           <div className="toolbar-group">
             <button onClick={syncRoom}>다시 시도</button>
-            <Link className="secondary-btn" to="/">
-              홈으로
-            </Link>
           </div>
         </div>
       </div>
