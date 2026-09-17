@@ -101,17 +101,21 @@ function GameMotif({ id }: { id: GameId }) {
         </>
       )}
 
+      {/* 우물고누: 동그라미 안에 X, 오른쪽 한 귀퉁이가 트인 자리가 우물이다. */}
       {id === "gonu" && (
         <>
-          <g stroke="#8a6a45" strokeWidth="1.6" fill="none">
-            <rect x="14" y="14" width="36" height="36" />
-            <line x1="32" y1="14" x2="32" y2="50" />
-            <line x1="14" y1="32" x2="50" y2="32" />
+          <g stroke="#8a6a45" strokeWidth="1.6" fill="none" strokeLinecap="round">
+            <path d="M19.2 19.2 A18 18 0 0 1 44.8 19.2" />
+            <path d="M44.8 44.8 A18 18 0 0 1 19.2 44.8" />
+            <path d="M19.2 44.8 A18 18 0 0 1 19.2 19.2" />
+            <line x1="19.2" y1="19.2" x2="44.8" y2="44.8" />
+            <line x1="44.8" y1="19.2" x2="19.2" y2="44.8" />
           </g>
-          <circle cx="14" cy="14" r="5" fill="#2b2620" />
-          <circle cx="50" cy="14" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
-          <circle cx="14" cy="50" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
-          <circle cx="50" cy="50" r="5" fill="#2b2620" />
+          <circle cx="32" cy="32" r="2.6" fill="#8a6a45" />
+          <circle cx="19.2" cy="19.2" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
+          <circle cx="44.8" cy="19.2" r="5" fill="#faf6ec" stroke="#8a6a45" strokeWidth="1.2" />
+          <circle cx="19.2" cy="44.8" r="5" fill="#2b2620" />
+          <circle cx="44.8" cy="44.8" r="5" fill="#2b2620" />
         </>
       )}
 

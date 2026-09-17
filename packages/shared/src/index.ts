@@ -17,8 +17,8 @@ export type { ChessState } from "./games/chess.js";
 export type { JanggiState, Formation } from "./games/janggi.js";
 export type { FlickState, FlickMove, FlickPos, FlickGrid } from "./games/flick.js";
 export { SIZE as FLICK_SIZE, MAX_FLICK as FLICK_MAX } from "./games/flick.js";
-export type { GonuState, PointId, GonuBoardMap } from "./games/gonu.js";
-export { POINTS, POINT_IDS, EDGES } from "./games/gonu.js";
+export type { GonuState, GonuVariant, GonuLayout, GonuArc, GonuLabel } from "./games/gonu.js";
+export { GONU_LAYOUTS, GONU_VARIANTS, DEFAULT_GONU_VARIANT, getGonuLayout, isGonuVariant } from "./games/gonu.js";
 export type { YutState, YutMove, YutPos, YutThrowResult, TrackPos as YutTrackPos } from "./games/yut.js";
 export type { TerritoryState, TerritoryMove, TerritoryCell } from "./games/territory.js";
 

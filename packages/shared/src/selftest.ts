@@ -4,7 +4,7 @@ import { checkersEngine } from "./games/checkers.js";
 import { chessEngine } from "./games/chess.js";
 import { janggiEngine } from "./games/janggi.js";
 import { flickEngine } from "./games/flick.js";
-import { gonuEngine } from "./games/gonu.js";
+import { gonuEngine, getGonuLayout, type GonuState, type GonuVariant } from "./games/gonu.js";
 import { yutEngine } from "./games/yut.js";
 import { territoryEngine } from "./games/territory.js";
 import type { GameEngine, Move } from "./types.js";
@@ -152,6 +152,189 @@ function ok(msg: string) {
   ok("janggi hanja glyphs verified (楚/漢 generals, 卒/兵 soldiers)");
 }
 
+// --- Gonu: every board the picker offers must build, and an unknown id falls back ---
+{
+  const ids = gonuEngine.meta.setupOptions?.map((o) => o.id) ?? [];
+  assert(ids.length === 3, `gonu: expected 3 boards in setupOptions, got ${ids.length}`);
+  for (const id of ids) {
+    const state = gonuEngine.createInitialState(id);
+    assert(state.variant === id, `gonu: createInitialState("${id}") should build that board, got ${state.variant}`);
+    const layout = getGonuLayout(state.variant);
+    assert(
+      state.cells.length === layout.points.length,
+      `gonu ${id}: state has ${state.cells.length} points, layout has ${layout.points.length}`,
+    );
+    assert(gonuEngine.legalMoves(state, 0).length > 0, `gonu ${id}: 흑 must have an opening move`);
+  }
+  const fallback = gonuEngine.createInitialState("존재하지않는말밭");
+  assert(fallback.variant === "umul", `gonu: unknown setup id should fall back to 우물고누, got ${fallback.variant}`);
+  // The pickers show setupOptions[0] before anyone touches them, so it has to be
+  // the same board createInitialState() builds with no id at all.
+  assert(ids[0] === gonuEngine.createInitialState().variant, "gonu: setupOptions[0] must match the default board");
+  ok("gonu: 우물/호박/넉줄 boards all build, unknown id falls back to 우물고누");
+}
+
+/** Builds an arbitrary gonu position for a rules check. */
+function gonuPosition(variant: GonuVariant, cells: (0 | 1 | null)[], turn: 0 | 1, plies = 4): GonuState {
+  return {
+    variant,
+    cells,
+    turn,
+    status: "ongoing",
+    winner: null,
+    reason: "",
+    plies,
+    quiet: 0,
+    taken: [0, 0],
+    last: null,
+  };
+}
+
+// --- 우물고누: the opening tradition bans is refused, and it would in fact win on the spot ---
+{
+  const start = gonuEngine.createInitialState("umul");
+  const layout = getGonuLayout("umul");
+  const banned = layout.bannedOpening!;
+  const from = layout.points[banned.from];
+  const to = layout.points[banned.to];
+
+  const opening = gonuEngine.legalMoves(start, 0);
+  assert(
+    !opening.some((m) => m.from!.x === from.x && m.from!.y === from.y && m.to.x === to.x && m.to.y === to.y),
+    "우물고누: 첫수 금지 move must not be offered",
+  );
+  const refused = gonuEngine.applyMove(start, { from, to }, 0);
+  assert(!refused.ok, "우물고누: 첫수 금지 move must be refused");
+  assert(
+    (refused.error ?? "").includes("첫수"),
+    `우물고누: refusal should explain the 첫수 rule, got "${refused.error}"`,
+  );
+
+  // Why it is banned: played out, it leaves 백 with nowhere at all to go.
+  const after = [...start.cells];
+  after[banned.from] = null;
+  after[banned.to] = 0;
+  const trapped = gonuPosition("umul", after as (0 | 1 | null)[], 1);
+  assert(
+    gonuEngine.legalMoves(trapped, 1).length === 0,
+    "우물고누: the banned opening must really be an instant trap (otherwise the ban is pointless)",
+  );
+
+  // And the other opening is fine.
+  const legal = gonuEngine.applyMove(start, opening[0], 0);
+  assert(legal.ok, "우물고누: the remaining opening must be playable");
+  assert(legal.state.status === "ongoing", "우물고누: the legal opening must not end the game");
+  ok("우물고누: 첫수 금지 enforced, and it is a real instant trap");
+}
+
+// --- 우물고누: trapping the opponent ends the game ---
+{
+  // 백 on SE+SW, 흑 on NE and the centre, NW open: 흑 steps NE→NW and 백, cut off
+  // from the centre by the well, has nothing left.
+  const state = gonuPosition("umul", [null, 0, 1, 1, 0], 0);
+  const layout = getGonuLayout("umul");
+  const result = gonuEngine.applyMove(state, { from: layout.points[1], to: layout.points[0] }, 0);
+  assert(result.ok, "우물고누: NE→NW should be legal");
+  assert(
+    result.state.status === "win" && result.state.winner === 0,
+    `우물고누: trapping 백 should win for 흑, got ${result.state.status}/${result.state.winner}`,
+  );
+  ok("우물고누: 상대를 가두면 그 자리에서 승리");
+}
+
+// --- 호박고누: a stone that left its camp can never go back in ---
+{
+  const layout = getGonuLayout("hobak");
+  const [blackHome, whiteHome] = layout.homes!;
+  const start = gonuEngine.createInitialState("hobak");
+
+  // Camp stones shuffling inside their own camp is fine.
+  const out = gonuEngine.applyMove(start, gonuEngine.legalMoves(start, 0)[0], 0);
+  assert(out.ok, "호박고누: 흑 should be able to leave the camp");
+  const insideCamp = gonuEngine
+    .legalMoves(out.state, 1)
+    .concat(gonuEngine.legalMoves({ ...out.state, turn: 0 } as GonuState, 0))
+    .some((m) => {
+      const to = layout.points.findIndex((p) => p.x === m.to.x && p.y === m.to.y);
+      const from = layout.points.findIndex((p) => p.x === m.from!.x && p.y === m.from!.y);
+      return blackHome.includes(to) && blackHome.includes(from);
+    });
+  assert(insideCamp, "호박고누: stones still in their camp should be able to shift within it");
+
+  // But a stone out on the ring may not re-enter any camp.
+  const gate = layout.adj[blackHome[1]].find((i) => !blackHome.includes(i) && !whiteHome.includes(i))!;
+  const cells: (0 | 1 | null)[] = layout.points.map(() => null);
+  cells[gate] = 0; // 흑 stone out on the ring, right next to its own camp
+  cells[blackHome[0]] = 0;
+  cells[whiteHome[0]] = 1;
+  cells[whiteHome[1]] = 1;
+  const position = gonuPosition("hobak", cells, 0);
+  const homeward = gonuEngine.legalMoves(position, 0).filter((m) => {
+    const to = layout.points.findIndex((p) => p.x === m.to.x && p.y === m.to.y);
+    const fromIdx = layout.points.findIndex((p) => p.x === m.from!.x && p.y === m.from!.y);
+    return fromIdx === gate && (blackHome.includes(to) || whiteHome.includes(to));
+  });
+  assert(homeward.length === 0, `호박고누: a stone off the camp must not re-enter one (${homeward.length} such moves)`);
+  ok("호박고누: 진영을 나온 말은 어느 진영에도 다시 들어가지 못함");
+}
+
+// --- 넉줄고누: sandwiching takes a stone, walking into a sandwich does not ---
+{
+  const layout = getGonuLayout("neokjul");
+  const at = (x: number, y: number) => layout.points.findIndex((p) => p.x === x && p.y === y);
+  const board = (spots: [number, number, 0 | 1][]): (0 | 1 | null)[] => {
+    const cells: (0 | 1 | null)[] = layout.points.map(() => null);
+    for (const [x, y, owner] of spots) cells[at(x, y)] = owner;
+    return cells;
+  };
+
+  // 흑 slides (2,3) up to (2,1), pinning 백's (1,1) against 흑's (0,1).
+  const pinning = gonuPosition(
+    "neokjul",
+    board([[0, 1, 0], [2, 3, 0], [1, 1, 1], [0, 0, 1], [3, 0, 1]]),
+    0,
+  );
+  const taken = gonuEngine.applyMove(pinning, { from: { x: 2, y: 3 }, to: { x: 2, y: 1 } }, 0);
+  assert(taken.ok, "넉줄고누: sliding up the column should be legal");
+  assert(taken.state.cells[at(1, 1)] === null, "넉줄고누: the pinned stone should be taken");
+  assert(taken.state.taken[0] === 1, `넉줄고누: 흑 should be credited 1 stone, got ${taken.state.taken[0]}`);
+
+  // Sliding your own stone in between two enemies is safe.
+  const suicide = gonuPosition(
+    "neokjul",
+    board([[0, 1, 1], [2, 1, 1], [1, 3, 0], [3, 3, 0], [0, 0, 1]]),
+    0,
+  );
+  const safe = gonuEngine.applyMove(suicide, { from: { x: 1, y: 3 }, to: { x: 1, y: 1 } }, 0);
+  assert(safe.ok, "넉줄고누: moving between two enemies should be legal");
+  assert(safe.state.cells[at(1, 1)] === 0, "넉줄고누: a stone that moves between two enemies must survive");
+
+  // A stone cornered with both its neighbours held goes too.
+  const cornered = gonuPosition(
+    "neokjul",
+    board([[0, 0, 1], [1, 0, 0], [0, 3, 0], [3, 3, 0], [3, 0, 1], [2, 0, 1]]),
+    0,
+  );
+  const corner = gonuEngine.applyMove(cornered, { from: { x: 0, y: 3 }, to: { x: 0, y: 1 } }, 0);
+  assert(corner.ok, "넉줄고누: sliding up the left column should be legal");
+  assert(corner.state.cells[at(0, 0)] === null, "넉줄고누: a stone pinned into the corner should be taken");
+
+  // Diagonals never take.
+  const diagonal = gonuPosition("neokjul", board([[1, 1, 1], [0, 0, 0], [3, 3, 0], [2, 3, 0], [0, 3, 1]]), 0);
+  const noTake = gonuEngine.applyMove(diagonal, { from: { x: 2, y: 3 }, to: { x: 2, y: 2 } }, 0);
+  assert(noTake.ok, "넉줄고누: the diagonal test move should be legal");
+  assert(noTake.state.cells[at(1, 1)] === 1, "넉줄고누: diagonal alignment must not take a stone");
+
+  // Down to one stone there is nothing left to pin, so the game is over.
+  const finishing = gonuPosition("neokjul", board([[0, 1, 0], [2, 3, 0], [1, 1, 1], [3, 0, 1]]), 0);
+  const finished = gonuEngine.applyMove(finishing, { from: { x: 2, y: 3 }, to: { x: 2, y: 1 } }, 0);
+  assert(
+    finished.ok && finished.state.status === "win" && finished.state.winner === 0,
+    `넉줄고누: taking 백 down to one stone should win, got ${finished.state.status}`,
+  );
+  ok("넉줄고누: 끼워 잡기·모퉁이 잡기 동작, 대각선은 잡지 않음, 한 알 남으면 종료");
+}
+
 // --- Every engine must reject malformed moves instead of throwing ---
 // Moves reach applyMove straight from a network client, so a throw here would
 // take the server process down with every other room on it.
@@ -194,8 +377,8 @@ function ok(msg: string) {
 }
 
 // --- Generic smoke test: play random legal moves for a while on every engine, no crash ---
-function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number) {
-  let state = engine.createInitialState();
+function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number, setupId?: string) {
+  let state = engine.createInitialState(setupId);
   let plies = 0;
   let lastTurn = engine.turn(state);
   let stuckGuard = 0;
@@ -222,7 +405,8 @@ function randomPlaythrough<TState>(engine: GameEngine<TState>, maxPlies: number)
     lastTurn = engine.turn(state);
   }
   const finalStatus = engine.status(state);
-  ok(`${engine.meta.id} random playthrough: ${plies} plies, final status = ${finalStatus.status}`);
+  const label = setupId ? `${engine.meta.id}/${setupId}` : engine.meta.id;
+  ok(`${label} random playthrough: ${plies} plies, final status = ${finalStatus.status}`);
 }
 
 randomPlaythrough(gomokuEngine, 60);
@@ -231,7 +415,9 @@ randomPlaythrough(checkersEngine, 150);
 randomPlaythrough(chessEngine, 150);
 randomPlaythrough(janggiEngine, 150);
 randomPlaythrough(flickEngine, 200);
-randomPlaythrough(gonuEngine, 80);
+randomPlaythrough(gonuEngine, 80, "umul");
+randomPlaythrough(gonuEngine, 120, "hobak");
+randomPlaythrough(gonuEngine, 120, "neokjul");
 randomPlaythrough(yutEngine, 400);
 randomPlaythrough(territoryEngine, 600);
 
