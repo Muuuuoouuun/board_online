@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 // Types and rules come from the engine so the renderer and the rules cannot drift.
 import {
   TERRITORY_MAX_LINE,
+  TERRITORY_TURN_START_MS,
   territoryCanExtend,
   territoryCanStart,
   territoryLineErrorText,
@@ -64,9 +65,9 @@ export default function TerritoryBoard({
   /** Whose stroke this is. In pass-and-play `you` is null, so it is simply whoever is to move. */
   const drawer: PlayerIndex = you ?? mover;
 
-  // Someone else's move landed (or the game ended): whatever was half-drawn is
-  // no longer about this board, so drop it rather than leave a stale line.
-  const boardKey = `${state.turn}:${state.status}:${state.lastGain.length}:${state.lastBy}`;
+  // A turn ended (played out, or run out) or the game did: whatever was half-drawn
+  // is no longer about this board, so drop it rather than leave a stale line.
+  const boardKey = `${state.turnsTaken}:${state.turn}:${state.status}`;
   useEffect(() => {
     setLine([]);
     setDrawing(false);
@@ -78,6 +79,30 @@ export default function TerritoryBoard({
     [state, drawer, line],
   );
   const lastGainSet = useMemo(() => new Set(state.lastGain.map(key)), [state.lastGain]);
+
+  /**
+   * The countdown, timed from when this client *saw* the turn start rather than
+   * from the host's own clock. Whoever is hosting the game is the authority on
+   * when a turn is up; this only has to show it, and counting locally keeps it
+   * right without the two clocks having to agree on what time it is. Network lag
+   * makes it read a few milliseconds generous, which is the harmless direction.
+   */
+  const running = state.turnStartedAt !== null && state.status === "ongoing";
+  const [left, setLeft] = useState(state.turnMs);
+  useEffect(() => {
+    if (!running) {
+      setLeft(state.turnMs);
+      return;
+    }
+    const startedAt = Date.now();
+    setLeft(state.turnMs);
+    const tick = window.setInterval(() => {
+      setLeft(Math.max(0, state.turnMs - (Date.now() - startedAt)));
+    }, 100);
+    return () => window.clearInterval(tick);
+  }, [running, state.turnStartedAt, state.turnMs]);
+
+  const urgent = running && left <= 5000;
 
   const { count0, count1 } = useMemo(() => {
     let c0 = 0;
@@ -122,7 +147,7 @@ export default function TerritoryBoard({
       return;
     }
     playSound("capture");
-    onMove({ line: candidate });
+    onMove({ kind: "line", line: candidate });
     setLine([]);
     setHint(null);
   }
@@ -275,15 +300,19 @@ export default function TerritoryBoard({
   const used = Math.max(0, line.length - 1);
   const drawColor = ready ? "#1f9d55" : moverColor;
 
+  // While drawing, say what the stroke would do; otherwise report what the last
+  // turn did — which is the only place "시간이 다 되어..." ever gets seen.
   const message = hint
     ? hint
-    : line.length === 0
-      ? canPlay
-        ? "내 땅 모서리에서 선을 그어 나갔다가 돌아오세요."
-        : null
-      : ready
+    : line.length > 0
+      ? ready
         ? `놓으면 ${preview.gain.length}칸을 차지합니다.`
-        : "자기 땅으로 다시 이어 붙이면 둘러싼 만큼 차지합니다.";
+        : "자기 땅으로 다시 이어 붙이면 둘러싼 만큼 차지합니다."
+      : state.status === "ongoing" && state.reason
+        ? state.reason
+        : canPlay
+          ? "내 땅 모서리에서 선을 그어 나갔다가 돌아오세요."
+          : null;
 
   return (
     <div className="terr-board-root">
@@ -299,6 +328,24 @@ export default function TerritoryBoard({
         .terr-score-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
         .terr-score-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .terr-score-count { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 1.05rem; flex-shrink: 0; }
+        .terr-clock-row { width: 100%; max-width: 480px; display: flex; align-items: center; gap: 9px; }
+        /* The track lives in a slot of its own so its width really is this turn's
+           share of the opening one — as a flex item it would just be shrunk back
+           to fill the row, and the clock getting shorter would never show. */
+        .terr-clock-slot { flex: 1; min-width: 0; }
+        .terr-clock-track {
+          height: 8px; border-radius: 4px; background: #e8e2d2;
+          box-shadow: inset 0 0 0 1px rgba(107, 74, 51, 0.14); overflow: hidden;
+          transition: width 260ms ease;
+        }
+        .terr-clock-fill { height: 100%; border-radius: 4px; transition: width 120ms linear; }
+        .terr-clock-num {
+          font-variant-numeric: tabular-nums; font-size: 0.82rem; font-weight: 700;
+          color: #7b8794; flex-shrink: 0; min-width: 3.6em; text-align: right;
+        }
+        .terr-clock-num--urgent { color: #c0362c; animation: terr-blink 620ms steps(2, end) infinite; }
+        .terr-clock-num--paused { color: #a8b0b8; font-weight: 600; }
+        @keyframes terr-blink { 50% { opacity: 0.35; } }
         .terr-svg-wrap { width: 100%; max-width: 480px; }
         .terr-svg { width: 100%; height: auto; display: block; touch-action: none; }
         .terr-foot { width: 100%; max-width: 480px; display: flex; align-items: center; gap: 10px; min-height: 30px; }
@@ -315,7 +362,7 @@ export default function TerritoryBoard({
         @keyframes terr-flash { from { opacity: 0.15; } to { opacity: 1; } }
         @media (prefers-reduced-motion: reduce) {
           .terr-start-dot { animation: none; opacity: 0.7; }
-          .terr-gain { animation: none; }
+          .terr-gain, .terr-clock-num--urgent { animation: none; }
         }
       `}</style>
 
@@ -330,6 +377,30 @@ export default function TerritoryBoard({
           <span className="terr-score-label">빨강{you === 1 ? " (나)" : ""}</span>
           <span className="terr-score-count">{count1}</span>
         </div>
+      </div>
+
+      <div className="terr-clock-row">
+        <div className="terr-clock-slot">
+          <div
+            className="terr-clock-track"
+            style={{ width: `${(state.turnMs / TERRITORY_TURN_START_MS) * 100}%` }}
+            role="timer"
+            aria-label={running ? `남은 시간 ${Math.ceil(left / 1000)}초` : "시계 멈춤"}
+          >
+            <div
+              className="terr-clock-fill"
+              style={{
+                width: running ? `${(left / state.turnMs) * 100}%` : "100%",
+                background: urgent ? BAD_COLOR : moverColor,
+              }}
+            />
+          </div>
+        </div>
+        <span
+          className={`terr-clock-num${urgent ? " terr-clock-num--urgent" : ""}${running ? "" : " terr-clock-num--paused"}`}
+        >
+          {running ? `${(left / 1000).toFixed(1)}초` : "대기"}
+        </span>
       </div>
 
       <div className="terr-svg-wrap">

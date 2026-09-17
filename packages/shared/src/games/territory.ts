@@ -33,7 +33,14 @@ import type {
  * part of the shared state: the client draws freely and locally, and only a
  * finished stroke is sent. An illegal stroke is *rejected* rather than
  * costing the turn, which is what makes freehand drawing forgiving enough to
- * be fun; the limit on a turn is the length cap above.
+ * be fun; the limits on a turn are the length cap above and the clock below.
+ *
+ * TURN CLOCK — every turn is timed, and each one is shorter than the last (see
+ * `turnBudget`), so the game opens as a thinking game and closes as a race. The
+ * engine only keeps the deadline and decides what running out means: the turn
+ * ends having taken nothing, exactly as if an empty stroke had been played. Who
+ * watches the clock is the host's job, through the `clock` implementation at the
+ * bottom of this file — the room server online, the page itself in pass-and-play.
  *
  * ---
  * CONTRACT NOTE — the one deliberate departure in this engine (flick.ts has
@@ -70,6 +77,30 @@ const SEARCH_CLOSE_BUDGET = 1500;
 /** How many distinct strokes `legalMoves` samples, at most one per starting corner. */
 const SAMPLE_LINES = 6;
 
+/** The first turn's clock, in ms. */
+export const TURN_START_MS = 24000;
+/** How much shorter every turn is than the one before it. */
+const TURN_STEP_MS = 600;
+/** ...but never shorter than this, or the endgame would be unplayable rather than tense. */
+export const TURN_FLOOR_MS = 6000;
+/**
+ * A timeout is allowed to arrive this much before the deadline. A host's timer
+ * fires a hair late, never early, so this is only slack for clocks that disagree
+ * by a few milliseconds — and a player who passes early only ever hurts themself.
+ */
+const TIMEOUT_GRACE_MS = 250;
+/**
+ * Turns that may run out back to back before the game is simply scored where it
+ * stands. Without it two idle players (or two abandoned tabs) would hand the turn
+ * back and forth forever, and the room would tick on for as long as it existed.
+ */
+const IDLE_TIMEOUT_LIMIT = 6;
+
+/** How long the turn after `turnsTaken` completed turns gets. */
+function turnBudget(turnsTaken: number): number {
+  return Math.max(TURN_FLOOR_MS, TURN_START_MS - turnsTaken * TURN_STEP_MS);
+}
+
 const ORTHO: readonly [number, number][] = [
   [1, 0],
   [-1, 0],
@@ -79,10 +110,11 @@ const ORTHO: readonly [number, number][] = [
 
 export type TerritoryCell = PlayerIndex | null;
 
-export interface TerritoryMove {
+export type TerritoryMove =
   /** The whole stroke: lattice vertices (0..WIDTH, 0..HEIGHT), each one step from the last. */
-  line: Pos[];
-}
+  | { kind: "line"; line: Pos[] }
+  /** Played by the host when the clock runs out; never chosen by a player. */
+  | { kind: "timeout" };
 
 export interface TerritoryState extends BaseState {
   /** Board size in *cells*; the lattice the line is drawn on is one larger in each direction. */
@@ -96,6 +128,14 @@ export interface TerritoryState extends BaseState {
   lastGain: Pos[];
   /** Who drew `lastLine`; null before the first move. */
   lastBy: PlayerIndex | null;
+  /** Turns finished so far — every one of them makes the next clock shorter. */
+  turnsTaken: number;
+  /** How long the turn on the table gets, in ms. */
+  turnMs: number;
+  /** Epoch ms this turn's clock started, or null while it is paused (see the TURN CLOCK note). */
+  turnStartedAt: number | null;
+  /** Turns that have run out back to back; any stroke that takes land resets it. */
+  idleTimeouts: number;
 }
 
 function cellInRange(x: number, y: number): boolean {
@@ -371,7 +411,7 @@ function findLines(board: TerritoryCell[][], player: PlayerIndex, want: number):
     for (let limit = 2; limit <= MAX_LINE && !hit; limit++) {
       hit = walk(false, limit);
     }
-    if (hit) found.push({ line: hit });
+    if (hit) found.push({ kind: "line", line: hit });
   }
   return found;
 }
@@ -434,6 +474,23 @@ function resolveInitial(board: TerritoryCell[][]): TurnResolution {
   return { turn: 0, ...finalScore(board) };
 }
 
+/** The deadline of the turn on the table, or null while the clock is paused or the game is over. */
+function clockDeadline(state: TerritoryState): number | null {
+  if (state.status !== "ongoing" || state.turnStartedAt === null) return null;
+  return state.turnStartedAt + state.turnMs;
+}
+
+/** The clock fields for the turn that starts once the current one is finished. */
+function startNextTurn(state: TerritoryState, now: number): Pick<TerritoryState, "turnsTaken" | "turnMs" | "turnStartedAt"> {
+  const turnsTaken = state.turnsTaken + 1;
+  return {
+    turnsTaken,
+    turnMs: turnBudget(turnsTaken),
+    // Running, unless the clock was paused — the host restarts it when play resumes.
+    turnStartedAt: state.turnStartedAt === null ? null : now,
+  };
+}
+
 function initialBoard(): TerritoryCell[][] {
   const board: TerritoryCell[][] = Array.from({ length: HEIGHT }, () => Array<TerritoryCell>(WIDTH).fill(null));
   for (let y = 0; y < HOME; y++) {
@@ -492,7 +549,21 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
   createInitialState(): TerritoryState {
     const board = initialBoard();
     const resolved = resolveInitial(board);
-    return { width: WIDTH, height: HEIGHT, board, lastLine: [], lastGain: [], lastBy: null, ...resolved };
+    return {
+      width: WIDTH,
+      height: HEIGHT,
+      board,
+      lastLine: [],
+      lastGain: [],
+      lastBy: null,
+      turnsTaken: 0,
+      turnMs: turnBudget(0),
+      // Paused until the host starts it: a room sits waiting for a second player,
+      // and nobody should lose their first turn to that wait.
+      turnStartedAt: null,
+      idleTimeouts: 0,
+      ...resolved,
+    };
   },
 
   turn(state) {
@@ -508,7 +579,7 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
     return findLines(state.board, player, SAMPLE_LINES);
   },
 
-  applyMove(state, move, player): ApplyResult<TerritoryState> {
+  applyMove(state, move, player, _rng, now = Date.now()): ApplyResult<TerritoryState> {
     const current: StatusResult = { status: state.status, winner: state.winner, reason: state.reason };
     if (state.status !== "ongoing") {
       return { ok: false, state, error: "게임이 이미 종료되었습니다.", status: current };
@@ -516,13 +587,60 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
     if (state.turn !== player) {
       return { ok: false, state, error: "상대방의 차례입니다.", status: current };
     }
-
-    // Moves arrive from the network, so the shape is not trustworthy. The length
-    // is checked before anything walks the array, so a sender cannot hand over a
-    // million vertices and make the room's thread copy them all.
-    if (!move || typeof move !== "object" || !Array.isArray(move.line)) {
+    // Moves arrive from the network, so the shape is not trustworthy.
+    if (!move || typeof move !== "object") {
       return { ok: false, state, error: "잘못된 요청입니다.", status: current };
     }
+
+    if (move.kind === "timeout") {
+      const deadline = clockDeadline(state);
+      if (deadline === null) {
+        return { ok: false, state, error: "시계가 아직 돌지 않았습니다.", status: current };
+      }
+      if (now + TIMEOUT_GRACE_MS < deadline) {
+        return { ok: false, state, error: "아직 시간이 남았습니다.", status: current };
+      }
+      // Nothing happens to the board — the turn simply ends having taken nothing.
+      const idleTimeouts = state.idleTimeouts + 1;
+      if (idleTimeouts >= IDLE_TIMEOUT_LIMIT) {
+        const scored = finalScore(state.board);
+        const nextState: TerritoryState = {
+          ...state,
+          lastLine: [],
+          lastGain: [],
+          turnsTaken: state.turnsTaken + 1,
+          idleTimeouts,
+          turnStartedAt: null,
+          ...scored,
+          reason: `시간 초과가 이어져 ${scored.reason}`,
+        };
+        return {
+          ok: true,
+          state: nextState,
+          status: { status: nextState.status, winner: nextState.winner, reason: nextState.reason },
+        };
+      }
+      const resolved = resolveTurn(state.board, player, "시간이 다 되어 차례가 넘어갔습니다.");
+      const nextState: TerritoryState = {
+        ...state,
+        lastLine: [],
+        lastGain: [],
+        idleTimeouts,
+        ...startNextTurn(state, now),
+        ...resolved,
+      };
+      return {
+        ok: true,
+        state: nextState,
+        status: { status: resolved.status, winner: resolved.winner, reason: resolved.reason },
+      };
+    }
+
+    if (move.kind !== "line" || !Array.isArray(move.line)) {
+      return { ok: false, state, error: "잘못된 요청입니다.", status: current };
+    }
+    // The length is checked before anything walks the array, so a sender cannot
+    // hand over a million vertices and make the room's thread copy them all.
     if (move.line.length > MAX_LINE + 1) {
       return { ok: false, state, error: territoryLineErrorText("too-long"), status: current };
     }
@@ -532,6 +650,9 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
     if (error) {
       return { ok: false, state, error: territoryLineErrorText(error), status: current };
     }
+    // A stroke that beats the host's timer by a hair stands. The clock is enforced
+    // by the timeout move actually arriving, not by second-guessing a move that
+    // was already on its way.
 
     const board = state.board.map((row) => row.slice());
     for (const p of gain) board[p.y][p.x] = player;
@@ -543,6 +664,8 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
       lastLine: line,
       lastGain: gain,
       lastBy: player,
+      idleTimeouts: 0,
+      ...startNextTurn(state, now),
       ...resolved,
     };
     return {
@@ -561,5 +684,20 @@ export const territoryEngine: GameEngine<TerritoryState, TerritoryMove> = {
       }
     }
     return out;
+  },
+
+  clock: {
+    deadline: clockDeadline,
+    restart(state, now) {
+      if (state.status !== "ongoing") return state;
+      return { ...state, turnStartedAt: now };
+    },
+    pause(state) {
+      if (state.turnStartedAt === null) return state;
+      return { ...state, turnStartedAt: null };
+    },
+    timeoutMove() {
+      return { kind: "timeout" };
+    },
   },
 };

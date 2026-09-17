@@ -12,6 +12,8 @@ import {
   territoryCanStart,
   territoryPreview,
   MAX_LINE as TERRITORY_MAX_LINE,
+  TURN_START_MS as TERRITORY_TURN_START_MS,
+  TURN_FLOOR_MS as TERRITORY_TURN_FLOOR_MS,
   type TerritoryState,
 } from "./games/territory.js";
 import type { GameEngine, Move } from "./types.js";
@@ -179,7 +181,7 @@ function ok(msg: string) {
     const preview = territoryPreview(state, 0, line);
     assert(preview.error === null, `territory: a closing stroke should be legal, got ${preview.error}`);
     assert(preview.gain.length === 1, `territory: that stroke should seal 1 cell, got ${preview.gain.length}`);
-    const res = territoryEngine.applyMove(state, { line }, 0);
+    const res = territoryEngine.applyMove(state, { kind: "line", line }, 0);
     assert(res.ok, "territory: applyMove must accept the previewed stroke");
     assert(res.state.board[0][3] === 0, "territory: the sealed cell should change hands");
     assert(res.state.turn === 1, "territory: a finished stroke passes the turn");
@@ -213,7 +215,7 @@ function ok(msg: string) {
     const state = fresh();
     const preview = territoryPreview(state, 0, line);
     assert(preview.error === error, `territory: a stroke that ${name} should fail with "${error}", got "${preview.error}"`);
-    const res = territoryEngine.applyMove(state, { line }, 0);
+    const res = territoryEngine.applyMove(state, { kind: "line", line }, 0);
     assert(!res.ok, `territory: applyMove must refuse a stroke that ${name}`);
     assert(res.state === state, `territory: a refused stroke must leave the board alone (${name})`);
   }
@@ -255,7 +257,7 @@ function ok(msg: string) {
     );
     const res = territoryEngine.applyMove(
       state,
-      { line: [{ x: 3, y: 14 }, { x: 4, y: 14 }] },
+      { kind: "line", line: [{ x: 3, y: 14 }, { x: 4, y: 14 }] },
       0,
     );
     assert(!res.ok, "territory: a stroke starting off your own land must be refused");
@@ -293,7 +295,7 @@ function ok(msg: string) {
     for (const move of moves) {
       assert(
         territoryEngine.applyMove(state, move, 0).ok,
-        `territory: sampled stroke ${JSON.stringify(move.line)} must be accepted`,
+        `territory: sampled stroke ${JSON.stringify(move)} must be accepted`,
       );
     }
     assert(territoryEngine.legalMoves(state, 1).length === 0, "territory: no strokes for the player not to move");
@@ -319,7 +321,7 @@ function ok(msg: string) {
     assert(preview.error === null, `territory: floor-drawing under their roof should be legal, got ${preview.error}`);
     const gained = preview.gain.map((p) => `${p.x},${p.y}`).sort().join(" ");
     assert(gained === "5,3 6,3", `territory: expected to seal 5,3 and 6,3, got "${gained}"`);
-    const res = territoryEngine.applyMove(rigged, { line }, 0);
+    const res = territoryEngine.applyMove(rigged, { kind: "line", line }, 0);
     assert(res.ok, "territory: applyMove must accept it too");
     assert(
       res.state.board[2][5] === 1 && res.state.board[2][6] === 1,
@@ -406,6 +408,102 @@ function ok(msg: string) {
   }
 
   ok("flick shot record verified (open / off / spent / claim, and passing)");
+}
+
+// --- Territory's turn clock: shorter every turn, and it has to actually bite ---
+{
+  const clock = territoryEngine.clock!;
+  assert(clock !== undefined, "territory: the engine must expose a turn clock");
+
+  // A fresh game's clock is stopped: a room sits waiting for its second player,
+  // and nobody should lose their first turn to that wait.
+  {
+    const state = territoryEngine.createInitialState();
+    assert(state.turnMs === TERRITORY_TURN_START_MS, `territory: the first turn should get ${TERRITORY_TURN_START_MS}ms`);
+    assert(clock.deadline(state) === null, "territory: a game nobody has started yet has no deadline");
+    const started = clock.restart(state, 10_000);
+    assert(clock.deadline(started) === 10_000 + TERRITORY_TURN_START_MS, "territory: starting the clock sets the deadline");
+    assert(clock.deadline(clock.pause(started)) === null, "territory: pausing the clock takes the deadline away");
+  }
+
+  // Each turn is shorter than the one before it, down to a floor it never goes under.
+  {
+    let state = clock.restart(territoryEngine.createInitialState(), 0);
+    const budgets: number[] = [state.turnMs];
+    let now = 0;
+    for (let i = 0; i < 40 && state.status === "ongoing"; i++) {
+      const moves = territoryEngine.legalMoves(state, state.turn);
+      if (moves.length === 0) break;
+      now += 1000;
+      const res = territoryEngine.applyMove(state, moves[0], state.turn, undefined, now);
+      assert(res.ok, "territory: (test setup) a sampled stroke should be accepted");
+      state = res.state;
+      budgets.push(state.turnMs);
+      assert(clock.deadline(state) === now + state.turnMs, "territory: every turn restarts the clock as it begins");
+    }
+    assert(budgets.length > 10, "territory: (test setup) the game should have run for a while");
+    const shrinking = budgets.every((ms, i) => i === 0 || ms <= budgets[i - 1]);
+    assert(shrinking, `territory: the clock must never grow: ${budgets.slice(0, 8).join(", ")}...`);
+    assert(budgets[3] < budgets[0], "territory: and it must actually shrink, not just stay put");
+    assert(
+      budgets.every((ms) => ms >= TERRITORY_TURN_FLOOR_MS),
+      `territory: no turn may drop below the ${TERRITORY_TURN_FLOOR_MS}ms floor`,
+    );
+  }
+
+  // Running out ends the turn having taken nothing — and cannot be played early.
+  {
+    const start = 5_000;
+    const state = clock.restart(territoryEngine.createInitialState(), start);
+    const deadline = clock.deadline(state)!;
+    const mover = state.turn;
+
+    const early = territoryEngine.applyMove(state, clock.timeoutMove(), mover, undefined, deadline - 5_000);
+    assert(!early.ok, "territory: a timeout with time still on the clock must be refused");
+    assert(early.state === state, "territory: and must leave the game alone");
+
+    const res = territoryEngine.applyMove(state, clock.timeoutMove(), mover, undefined, deadline);
+    assert(res.ok, "territory: a timeout at the deadline must be accepted");
+    assert(res.state.turn !== mover, "territory: running out hands the turn over");
+    assert(res.state.board.flat().join() === state.board.flat().join(), "territory: and takes nothing off the board");
+    assert(res.state.turnMs < state.turnMs, "territory: a turn lost to the clock still shortens the next one");
+    assert(res.state.lastGain.length === 0 && res.state.lastLine.length === 0, "territory: nothing was drawn");
+
+    const stopped = territoryEngine.applyMove(clock.pause(state), clock.timeoutMove(), mover, undefined, deadline);
+    assert(!stopped.ok, "territory: a stopped clock cannot run out");
+  }
+
+  // Two idle players would otherwise hand the turn back and forth forever, and a
+  // room would tick on for as long as it existed. Enough of them scores the game.
+  {
+    let state = clock.restart(territoryEngine.createInitialState(), 0);
+    let now = 0;
+    let turns = 0;
+    while (state.status === "ongoing" && turns < 50) {
+      now = clock.deadline(state)!;
+      const res = territoryEngine.applyMove(state, clock.timeoutMove(), state.turn, undefined, now);
+      assert(res.ok, "territory: (test setup) each timeout should be accepted");
+      state = res.state;
+      turns++;
+    }
+    assert(state.status !== "ongoing", `territory: a game nobody plays must end, not run forever (${turns} turns)`);
+    assert(turns <= 10, `territory: and it should end promptly, not after ${turns} turns`);
+    assert(state.reason.includes("시간 초과"), `territory: the ending should say why: "${state.reason}"`);
+  }
+
+  // A stroke that takes land clears that idle count, so a game being played
+  // never wanders into the abandoned-game ending.
+  {
+    let state = clock.restart(territoryEngine.createInitialState(), 0);
+    let now = clock.deadline(state)!;
+    state = territoryEngine.applyMove(state, clock.timeoutMove(), state.turn, undefined, now).state;
+    assert(state.idleTimeouts === 1, "territory: (test setup) one turn should have been lost to the clock");
+    const moves = territoryEngine.legalMoves(state, state.turn);
+    const played = territoryEngine.applyMove(state, moves[0], state.turn, undefined, now + 1);
+    assert(played.ok && played.state.idleTimeouts === 0, "territory: playing a stroke clears the idle count");
+  }
+
+  ok("territory turn clock verified (shrinks to a floor, bites, pauses, and ends an abandoned game)");
 }
 
 // --- Every engine must reject malformed moves instead of throwing ---

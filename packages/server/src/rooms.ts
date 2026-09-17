@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { getEngine, type GameId, type PlayerIndex } from "@board-online/shared";
+import { applyMoveSafely, getEngine, type GameId, type PlayerIndex } from "@board-online/shared";
 
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O/1/I/L to avoid confusion
 
@@ -26,6 +26,10 @@ export interface Room {
   seats: Seat[];
   createdAt: number;
   lastActivityAt: number;
+  /** Pending turn-clock timer — only games with a `clock` ever have one (see syncTurnClock). */
+  clockTimer?: NodeJS.Timeout;
+  /** Whether the turn clock is currently running, so resuming play cannot be mistaken for carrying on. */
+  clockRunning?: boolean;
 }
 
 const rooms = new Map<string, Room>();
@@ -132,6 +136,70 @@ export function resetRoom(room: Room) {
   const engine = getEngine(room.gameId);
   room.state = engine.createInitialState(room.setupId);
   room.lastActivityAt = Date.now();
+  stopTurnClock(room);
+}
+
+function stopTurnClock(room: Room) {
+  if (room.clockTimer) clearTimeout(room.clockTimer);
+  room.clockTimer = undefined;
+  room.clockRunning = false;
+}
+
+/**
+ * Brings the room's turn clock in line with the room as it now stands. Safe to
+ * call after anything that could change either — a move, a join, a disconnect, a
+ * rematch — and a no-op for games that are not timed.
+ *
+ * The clock only runs while there are two connected players: a room waiting for
+ * its second player, or one whose opponent has dropped, must not burn somebody's
+ * turn. Resuming after such a wait restarts the turn with its full time, which
+ * does mean a player could reconnect to buy themselves a fresh clock — a slow and
+ * self-defeating trick in a game you are playing with a friend, and far better
+ * than losing turns to a flaky connection.
+ *
+ * `onTimeout` is called (with the clock and the room already back in step) when a
+ * turn actually runs out, so the caller can broadcast the new state.
+ */
+export function syncTurnClock(room: Room, onTimeout: (room: Room) => void) {
+  const engine = getEngine(room.gameId);
+  const clock = engine.clock;
+  if (!clock) return;
+
+  if (room.clockTimer) clearTimeout(room.clockTimer);
+  room.clockTimer = undefined;
+
+  const playable = engine.status(room.state).status === "ongoing";
+  const ready = playable && room.seats.length === 2 && room.seats.every((s) => s.connected);
+  if (!ready) {
+    if (room.clockRunning) room.state = clock.pause(room.state);
+    room.clockRunning = false;
+    return;
+  }
+
+  // Play is starting or restarting after a wait: the turn on the table gets its
+  // time back. An ordinary move leaves the clock running, so it is not touched.
+  if (!room.clockRunning) {
+    room.state = clock.restart(room.state, Date.now());
+    room.clockRunning = true;
+  }
+
+  const deadline = clock.deadline(room.state);
+  if (deadline === null) return;
+  // A hair past the deadline, so the engine never sees a timeout arrive early.
+  room.clockTimer = setTimeout(() => {
+    room.clockTimer = undefined;
+    const turn = engine.turn(room.state);
+    const result = applyMoveSafely(engine, room.state, clock.timeoutMove(), turn, undefined, Date.now());
+    if (!result.ok) {
+      // The clock and the state disagree (a move landed as the timer fired):
+      // re-sync against whatever the state actually says now and leave it there.
+      syncTurnClock(room, onTimeout);
+      return;
+    }
+    room.state = result.state;
+    syncTurnClock(room, onTimeout);
+    onTimeout(room);
+  }, Math.max(0, deadline - Date.now()) + 30);
 }
 
 export function roomSummary(room: Room) {
@@ -150,6 +218,7 @@ export function startRoomCleanup(intervalMs = 5 * 60 * 1000, staleMs = 30 * 60 *
     for (const [code, room] of rooms) {
       const anyoneConnected = room.seats.some((s) => s.connected);
       if (!anyoneConnected && now - room.lastActivityAt > staleMs) {
+        stopTurnClock(room);
         rooms.delete(code);
       }
     }

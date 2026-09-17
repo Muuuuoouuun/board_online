@@ -17,6 +17,8 @@ import {
   roomSummary,
   seatForSocket,
   startRoomCleanup,
+  syncTurnClock,
+  type Room,
 } from "./rooms.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +45,17 @@ const io = new Server(httpServer, {
   cors: { origin: true },
 });
 
+/**
+ * Keeps a room's turn clock in step after anything that could have moved it, and
+ * pushes the new state when a turn actually runs out. Timed games are the only
+ * ones this does anything for; the rest fall straight through.
+ */
+function tickRoom(room: Room) {
+  syncTurnClock(room, (timedOut) => {
+    io.to(timedOut.code).emit("room:state", roomSummary(timedOut));
+  });
+}
+
 io.on("connection", (socket) => {
   socket.on("room:create", (payload: { gameId?: string; setupId?: string }, ack?: (res: unknown) => void) => {
     const gameId = payload?.gameId;
@@ -52,6 +65,7 @@ io.on("connection", (socket) => {
     }
     const { room, seat } = createRoom(gameId, socket.id, payload?.setupId);
     socket.join(room.code);
+    tickRoom(room);
     ack?.({ ok: true, you: seat.playerIndex, seatToken: seat.seatToken, ...roomSummary(room) });
   });
 
@@ -67,6 +81,8 @@ io.on("connection", (socket) => {
       return;
     }
     socket.join(result.room.code);
+    // The clock starts here when this join is the one that makes the room playable.
+    tickRoom(result.room);
     ack?.({ ok: true, you: result.seat.playerIndex, seatToken: result.seat.seatToken, ...roomSummary(result.room) });
     io.to(result.room.code).emit("room:state", roomSummary(result.room));
   });
@@ -85,13 +101,14 @@ io.on("connection", (socket) => {
     }
     const engine = getEngine(found.room.gameId);
     // Moves are attacker-controlled, so they go through the shared guard.
-    const result = applyMoveSafely(engine, found.room.state, move, found.seat.playerIndex);
+    const result = applyMoveSafely(engine, found.room.state, move, found.seat.playerIndex, undefined, Date.now());
     if (!result.ok) {
       ack?.({ ok: false, error: result.error });
       return;
     }
     found.room.state = result.state;
     found.room.lastActivityAt = Date.now();
+    tickRoom(found.room);
     ack?.({ ok: true });
     io.to(found.room.code).emit("room:state", roomSummary(found.room));
   });
@@ -104,6 +121,7 @@ io.on("connection", (socket) => {
       return;
     }
     resetRoom(found.room);
+    tickRoom(found.room);
     ack?.({ ok: true });
     io.to(found.room.code).emit("room:state", roomSummary(found.room));
   });
@@ -125,6 +143,8 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     const found = disconnectSocket(socket.id);
     if (found) {
+      // Nobody's turn should burn while their opponent is away.
+      tickRoom(found.room);
       io.to(found.room.code).emit("room:state", roomSummary(found.room));
     }
   });

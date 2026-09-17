@@ -5,6 +5,7 @@ import GameView from "../components/GameView.js";
 import RulesModal from "../components/RulesModal.js";
 import ResultModal, { type ResultKind } from "../components/ResultModal.js";
 import SoundToggle from "../components/SoundToggle.js";
+import { useTurnClock } from "../lib/useTurnClock.js";
 
 export default function Local() {
   const params = useParams<{ gameId: string }>();
@@ -40,6 +41,10 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
   useEffect(() => {
     setResultDismissed(false);
   }, [statusKey]);
+
+  // Same screen, so there is no server to run a timed game's clock — and nobody
+  // should lose a turn to the rules pop-up being open.
+  useTurnClock(engine, state, status.status === "ongoing" && !showRules, setState);
 
   function handleMove(move: Move) {
     const result = engine.applyMove(state, move, turn);

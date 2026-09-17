@@ -23,6 +23,8 @@ export type { YutState, YutMove, YutPos, YutThrowResult, TrackPos as YutTrackPos
 export type { TerritoryState, TerritoryMove, TerritoryCell, TerritoryLineError } from "./games/territory.js";
 export {
   MAX_LINE as TERRITORY_MAX_LINE,
+  TURN_START_MS as TERRITORY_TURN_START_MS,
+  TURN_FLOOR_MS as TERRITORY_TURN_FLOOR_MS,
   territoryCanStart,
   territoryCanExtend,
   territoryPreview,
@@ -70,9 +72,10 @@ export function applyMoveSafely<TState extends BaseState, TMove>(
   move: TMove,
   player: PlayerIndex,
   rng?: Rng,
+  now?: number,
 ): ApplyResult<TState> {
   try {
-    return engine.applyMove(state, move, player, rng);
+    return engine.applyMove(state, move, player, rng, now);
   } catch {
     return { ok: false, state, error: "둘 수 없는 이동입니다.", status: engine.status(state) };
   }

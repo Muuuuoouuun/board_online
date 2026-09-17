@@ -25,6 +25,28 @@ export interface Move {
 /** Injected so games with chance (yut throws, flick scatter) stay testable and server-authoritative. */
 export type Rng = () => number;
 
+/**
+ * A game whose turns are timed.
+ *
+ * The engine owns the rules — how long a turn gets, and what running out of
+ * time does to the game — while whoever is hosting the game owns the actual
+ * timer: the room server for online play, the page itself for pass-and-play.
+ * Both do the same three things: pause the clock while there is nobody to play
+ * against, restart it when play resumes, and play `timeoutMove()` the moment
+ * the deadline passes. Games that are not timed simply leave `clock` off, and
+ * the host skips all of it.
+ */
+export interface TurnClock<TState, TMove> {
+  /** Epoch ms the turn on the table runs out at, or null when no clock is running. */
+  deadline(state: TState): number | null;
+  /** Starts the turn on the table over at `now` — play is (re)starting after a wait. */
+  restart(state: TState, now: number): TState;
+  /** Stops the clock: nobody's turn should burn while there is nobody to play against. */
+  pause(state: TState): TState;
+  /** The move to play when the deadline passes. */
+  timeoutMove(): TMove;
+}
+
 export interface StatusResult {
   status: GameStatus;
   winner: PlayerIndex | null;
@@ -99,9 +121,14 @@ export interface GameEngine<TState extends BaseState = BaseState, TMove = Move> 
   status(state: TState): StatusResult;
   /** All legal moves for `player` in `state`. Empty when it is not their turn or game is over. */
   legalMoves(state: TState, player: PlayerIndex): TMove[];
-  /** `rng` is supplied by the server for games with chance; defaults to Math.random. */
-  applyMove(state: TState, move: TMove, player: PlayerIndex, rng?: Rng): ApplyResult<TState>;
+  /**
+   * `rng` is supplied by the server for games with chance; defaults to Math.random.
+   * `now` is supplied by whoever is hosting a timed game (see `clock`); defaults to Date.now().
+   */
+  applyMove(state: TState, move: TMove, player: PlayerIndex, rng?: Rng, now?: number): ApplyResult<TState>;
   pieces(state: TState): BoardPiece[];
+  /** Present only on games whose turns are timed. */
+  clock?: TurnClock<TState, TMove>;
 }
 
 export function posEq(a: Pos, b: Pos): boolean {
