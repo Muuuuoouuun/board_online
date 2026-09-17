@@ -5,11 +5,21 @@ import type { ApplyResult, BoardPiece, GameEngine, PlayerIndex, StatusResult } f
  *
  * Each player owns one stone that rests inside their own territory. On your
  * turn you flick it up to three times — grab the stone, pull it back and let
- * go, and it flies the other way, as far as you pulled. If it is back inside
- * your own land after flick 1, 2 or 3, the path you traced (closed by the
- * implicit return into your land) becomes yours. If the stone leaves the
- * board, or is still outside your land after the third flick, you claim
- * nothing and the stone is put back where the turn started.
+ * go, and it shoots off the other way and slides to a stop. If it comes to
+ * rest inside your own land after flick 1, 2 or 3, the path you traced
+ * (closed by the implicit return into your land) becomes yours. If the stone
+ * slides off the board, or is still outside your land after the third flick,
+ * you claim nothing and the stone is put back where the turn started.
+ *
+ * PHYSICS — the pull is not a distance, it is how hard the stone is struck.
+ * It leaves at a speed set by the pull and slows under the board's friction
+ * until it stops, so it carries its own momentum and the distance it covers
+ * grows with the *square* of the pull: pull twice as far and it travels four
+ * times as far. That is deliberately not something you can read off the
+ * screen — where a stone ends up is a feel you build, not a line you follow,
+ * so the board shows which way and how hard, and nothing more. See
+ * `flickTrajectory`, which is the one place the motion is worked out: the
+ * engine resolves the shot with it and every client replays the same slide.
  *
  * Every flick is recorded in `lastShot`, because where the stone *tried* to go
  * is not always where it ends up: a shot off the board, or a third shot that
@@ -19,12 +29,12 @@ import type { ApplyResult, BoardPiece, GameEngine, PlayerIndex, StatusResult } f
  *
  * ---
  * CONTRACT NOTE — the one deliberate departure in this engine:
- * Flicking is continuous aim (any direction, any power up to MAX_FLICK), so
+ * Flicking is continuous aim (any direction, any strength up to MAX_PULL), so
  * `legalMoves` cannot enumerate the legal move space the way every other
  * engine in this codebase does. It returns a small fixed sample of full-power
  * directions purely so the generic "pick a random legal move" fuzz test and
  * simple AIs have something to work with. `applyMove` accepts ANY
- * `{ kind: "flick", dx, dy }` whose magnitude is within [0, MAX_FLICK] —
+ * `{ kind: "flick", dx, dy }` whose magnitude is within [0, MAX_PULL] —
  * validated purely by range, never by membership in the sampled list. Do not
  * assume elsewhere in the codebase that legalMoves() is exhaustive for flick.
  * ---
@@ -36,8 +46,19 @@ import type { ApplyResult, BoardPiece, GameEngine, PlayerIndex, StatusResult } f
 export const SIZE = 48;
 /** Radius (in board units) of each player's starting quarter-circle of land. */
 const CORNER_RADIUS = 7;
-/** Max distance a single flick may travel, in board units. */
-export const MAX_FLICK = 16;
+/** Furthest the stone can be pulled back, in board units — the hardest strike available. */
+export const MAX_PULL = 16;
+/**
+ * Launch speed, in board units per second, for every board unit of pull.
+ * A full-power strike leaves at MAX_PULL * LAUNCH_SPEED = 60 units/s.
+ */
+const LAUNCH_SPEED = 3.75;
+/**
+ * How hard the board slows a sliding stone, in board units per second squared.
+ * With the launch speed above, a full-power strike covers 30 of the board's 48
+ * units and takes a second to do it, while a half-power one manages 7.5.
+ */
+const FRICTION = 60;
 /** Hard cap on total completed turns (both players combined) — guarantees the game always
  *  ends even if neither player ever successfully claims anything. 40 turns = 20 each. */
 const ROUND_LIMIT = 40;
@@ -49,6 +70,76 @@ const EPS = 1e-6;
 export interface FlickPos {
   x: number;
   y: number;
+}
+
+/** One stone's whole slide, worked out up front. */
+export interface FlickTrajectory {
+  from: FlickPos;
+  /** Where it comes to rest — outside the board when the strike carried it off the edge. */
+  to: FlickPos;
+  /** Launch speed in board units per second, and the direction it was struck in. */
+  speed: number;
+  ux: number;
+  uy: number;
+  /** How far it slides, and how long that takes, in seconds. */
+  distance: number;
+  duration: number;
+  /** True when the slide carries it past the edge of the board. */
+  offBoard: boolean;
+}
+
+/**
+ * Works out the whole slide from the impulse the stone was struck with.
+ *
+ * Nothing pushes the stone sideways and it does not bounce, so the slide is a
+ * straight line and the motion has a closed form — no stepping, and no drift
+ * between the server's answer and the animation each client draws from it.
+ */
+export function flickTrajectory(from: FlickPos, dx: number, dy: number): FlickTrajectory {
+  // Math.sqrt rather than Math.hypot: hypot's precision is implementation-defined,
+  // and the server and both clients have to arrive at the same number for the
+  // animation to finish where the board says the stone is.
+  const pull = Math.sqrt(dx * dx + dy * dy);
+  if (!(pull > 0)) {
+    return { from, to: from, speed: 0, ux: 0, uy: 0, distance: 0, duration: 0, offBoard: false };
+  }
+  const ux = dx / pull;
+  const uy = dy / pull;
+  const speed = pull * LAUNCH_SPEED;
+  // Sliding to a stop under constant friction: v² = 2·a·d.
+  const distance = (speed * speed) / (2 * FRICTION);
+  const duration = speed / FRICTION;
+  const to = { x: from.x + ux * distance, y: from.y + uy * distance };
+  // The board is a square, so a stone that leaves it never comes back.
+  const offBoard = to.x < 0 || to.x > SIZE || to.y < 0 || to.y > SIZE;
+  return { from, to, speed, ux, uy, distance, duration, offBoard };
+}
+
+/**
+ * The moment the slide carries the stone over the edge of the board, or null when
+ * it stays on. Only the renderer needs this — a stone that shoots off the board
+ * is gone the moment it crosses the edge, and without this the animation would sit
+ * there for the rest of the slide watching nothing.
+ */
+export function flickExitTime(traj: FlickTrajectory): number | null {
+  if (!traj.offBoard || traj.duration <= 0) return null;
+  const { from, ux, uy, speed, duration } = traj;
+  let exit = Infinity;
+  if (ux > 0) exit = Math.min(exit, (SIZE - from.x) / ux);
+  else if (ux < 0) exit = Math.min(exit, -from.x / ux);
+  if (uy > 0) exit = Math.min(exit, (SIZE - from.y) / uy);
+  else if (uy < 0) exit = Math.min(exit, -from.y / uy);
+  if (!Number.isFinite(exit) || exit < 0) return null;
+  // Invert travelled(t) = v·t - ½·(v/duration)·t² for the distance to the edge.
+  const disc = duration * duration - (2 * duration * exit) / speed;
+  return duration - Math.sqrt(disc > 0 ? disc : 0);
+}
+
+/** Where the stone is `t` seconds into the slide — fast off the mark, coasting to a stop. */
+export function flickPositionAt(traj: FlickTrajectory, t: number): FlickPos {
+  const clamped = t < 0 ? 0 : t > traj.duration ? traj.duration : t;
+  const travelled = traj.speed * clamped - 0.5 * FRICTION * clamped * clamped;
+  return { x: traj.from.x + traj.ux * travelled, y: traj.from.y + traj.uy * travelled };
 }
 
 /** grid[y][x]: the owner of that cell, or null while neutral/unclaimed. */
@@ -67,12 +158,15 @@ export type FlickOutcome =
   /** landed on open (or the opponent's) land with flicks to spare: the turn goes on */
   | "open";
 
-/** The flick just played, so every client can animate the same shot. */
+/** The flick just played, so every client can replay the same slide. */
 export interface FlickShot {
   player: PlayerIndex;
-  /** Where the stone was flicked from, and where the flick sent it. `to` may be off the board. */
+  /** Where the stone was struck from, and where it slid to. `to` may be off the board. */
   from: FlickPos;
   to: FlickPos;
+  /** The impulse it was struck with — hand it to `flickTrajectory` to get the whole slide back. */
+  dx: number;
+  dy: number;
   outcome: FlickOutcome;
   /** Cells newly claimed by this shot; 0 unless `outcome` is "claim". */
   claimed: number;
@@ -245,12 +339,22 @@ function endTurn(
   };
 }
 
-/** Evenly spread full-power directions — see the contract note at the top of this file. */
-function sampledFlicks(count: number): FlickMove[] {
+/**
+ * Evenly spread directions at a few strengths — see the contract note at the top
+ * of this file. The strengths matter as much as the directions: distance grows
+ * with the square of the pull, so a sample of nothing but full-power strikes is
+ * a sample of shots that mostly slide straight off the board.
+ */
+const SAMPLE_STRENGTHS = [0.35, 0.6, 1];
+
+function sampledFlicks(directions: number): FlickMove[] {
   const moves: FlickMove[] = [];
-  for (let i = 0; i < count; i++) {
-    const angle = (2 * Math.PI * i) / count;
-    moves.push({ kind: "flick", dx: MAX_FLICK * Math.cos(angle), dy: MAX_FLICK * Math.sin(angle) });
+  for (let i = 0; i < directions; i++) {
+    const angle = (2 * Math.PI * i) / directions;
+    for (const strength of SAMPLE_STRENGTHS) {
+      const pull = MAX_PULL * strength;
+      moves.push({ kind: "flick", dx: pull * Math.cos(angle), dy: pull * Math.sin(angle) });
+    }
   }
   return moves;
 }
@@ -291,7 +395,7 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
 
   legalMoves(state, player): FlickMove[] {
     if (state.status !== "ongoing" || state.turn !== player) return [];
-    return [...sampledFlicks(20), { kind: "giveup" }];
+    return [...sampledFlicks(12), { kind: "giveup" }];
   },
 
   applyMove(state, move, player): ApplyResult<FlickState> {
@@ -320,15 +424,14 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
       return { ok: false, state, error: "잘못된 방향입니다.", status: current };
     }
     const power = Math.hypot(dx, dy);
-    if (power > MAX_FLICK + EPS) {
+    if (power > MAX_PULL + EPS) {
       return { ok: false, state, error: "튕기는 힘이 너무 셉니다.", status: current };
     }
 
     const from = state.stones[player];
-    const to: FlickPos = { x: from.x + dx, y: from.y + dy };
-    const offBoard = to.x < 0 || to.x > SIZE || to.y < 0 || to.y > SIZE;
+    const { to, offBoard } = flickTrajectory(from, dx, dy);
 
-    const shot = (outcome: FlickOutcome, claimed = 0): FlickShot => ({ player, from, to, outcome, claimed });
+    const shot = (outcome: FlickOutcome, claimed = 0): FlickShot => ({ player, from, to, dx, dy, outcome, claimed });
 
     if (offBoard) {
       const nextState = endTurn(

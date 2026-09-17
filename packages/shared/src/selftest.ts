@@ -3,7 +3,14 @@ import { reversiEngine } from "./games/reversi.js";
 import { checkersEngine } from "./games/checkers.js";
 import { chessEngine } from "./games/chess.js";
 import { janggiEngine } from "./games/janggi.js";
-import { flickEngine, MAX_FLICK as FLICK_MAX } from "./games/flick.js";
+import {
+  flickEngine,
+  flickExitTime,
+  flickPositionAt,
+  flickTrajectory,
+  MAX_PULL as FLICK_MAX_PULL,
+  SIZE as FLICK_SIZE,
+} from "./games/flick.js";
 import { gonuEngine } from "./games/gonu.js";
 import { yutEngine } from "./games/yut.js";
 import {
@@ -337,6 +344,95 @@ function ok(msg: string) {
   ok("territory line-drawing verified (stroke rules, length cap, enclosure, client helpers)");
 }
 
+// --- Flick physics: the stone is struck, then slides to a stop ---
+// The pull is how hard it is hit, not how far it goes, and nothing on screen
+// tells the player where it will stop — so what the numbers actually do here is
+// the whole game.
+{
+  const origin = { x: 10, y: 10 };
+
+  // Distance grows with the square of the pull, because a stone sliding to a
+  // stop under constant friction covers v²/2a.
+  {
+    const quarter = flickTrajectory(origin, FLICK_MAX_PULL / 4, 0).distance;
+    const half = flickTrajectory(origin, FLICK_MAX_PULL / 2, 0).distance;
+    const full = flickTrajectory(origin, FLICK_MAX_PULL, 0).distance;
+    assert(Math.abs(half / quarter - 4) < 1e-9, `flick: doubling the pull should quadruple the distance, got ${half / quarter}`);
+    assert(Math.abs(full / half - 4) < 1e-9, `flick: and again, got ${full / half}`);
+    assert(full > FLICK_SIZE / 2 && full < FLICK_SIZE, `flick: a full strike should cross much of the board, got ${full}`);
+    assert(flickTrajectory(origin, 0, 0).distance === 0, "flick: no pull, no movement");
+  }
+
+  // Direction is the pull's, and the slide is a straight line: no bounce, and
+  // nothing pushing the stone sideways.
+  {
+    const traj = flickTrajectory(origin, 6, 8); // 3-4-5, so the pull is exactly 10
+    assert(Math.abs(traj.speed - 10 * 3.75) < 1e-9, `flick: launch speed should follow the pull, got ${traj.speed}`);
+    const dx = traj.to.x - origin.x;
+    const dy = traj.to.y - origin.y;
+    assert(Math.abs(dy / dx - 8 / 6) < 1e-9, "flick: the stone slides the way it was struck");
+    assert(Math.abs(Math.sqrt(dx * dx + dy * dy) - traj.distance) < 1e-9, "flick: and only that far");
+  }
+
+  // It carries momentum: fast off the mark, coasting to a stop. More than half
+  // the ground is covered in the first half of the slide, and it ends at rest.
+  {
+    const traj = flickTrajectory(origin, FLICK_MAX_PULL, 0);
+    const half = flickPositionAt(traj, traj.duration / 2);
+    const covered = (half.x - origin.x) / traj.distance;
+    assert(covered > 0.7 && covered < 0.8, `flick: halfway through the slide it should be ~3/4 there, got ${covered}`);
+    const start = flickPositionAt(traj, 0);
+    assert(start.x === origin.x && start.y === origin.y, "flick: the slide starts where the stone was");
+    const end = flickPositionAt(traj, traj.duration);
+    assert(Math.abs(end.x - traj.to.x) < 1e-9, "flick: and finishes exactly where it comes to rest");
+    assert(
+      flickPositionAt(traj, traj.duration + 5).x === end.x,
+      "flick: a stopped stone stays stopped, however long you wait",
+    );
+    // Deceleration, not a constant crawl: every later slice covers less ground.
+    let prev = Infinity;
+    for (let i = 0; i < 5; i++) {
+      const a = flickPositionAt(traj, (traj.duration * i) / 5);
+      const b = flickPositionAt(traj, (traj.duration * (i + 1)) / 5);
+      const step = b.x - a.x;
+      assert(step < prev, `flick: slice ${i} should cover less ground than the one before it`);
+      prev = step;
+    }
+  }
+
+  // Leaving the board is worked out from where the slide actually ends, not from
+  // the pull — a hard strike at the edge goes off, a soft one at the same spot
+  // stops short of it.
+  {
+    const nearEdge = { x: FLICK_SIZE - 4, y: 24 };
+    assert(flickTrajectory(nearEdge, FLICK_MAX_PULL, 0).offBoard, "flick: a full strike at the edge slides off");
+    const gentle = flickTrajectory(nearEdge, 3, 0);
+    assert(!gentle.offBoard, `flick: a gentle one stops short (${gentle.distance} units)`);
+    assert(gentle.to.x < FLICK_SIZE, "flick: and stays on the board");
+
+    // And the renderer can tell when the stone is actually gone, rather than
+    // watching an empty board for the rest of the slide.
+    const hard = flickTrajectory(nearEdge, FLICK_MAX_PULL, 0);
+    const exit = flickExitTime(hard)!;
+    assert(exit !== null && exit > 0 && exit < hard.duration, `flick: it should leave part-way through the slide, at ${exit}`);
+    assert(
+      Math.abs(flickPositionAt(hard, exit).x - FLICK_SIZE) < 1e-9,
+      "flick: and the moment it leaves is the moment it reaches the edge",
+    );
+    assert(flickExitTime(gentle) === null, "flick: a stone that stays on the board never leaves it");
+  }
+
+  // Replaying the same strike must give the same slide, or the animation each
+  // client draws would drift away from the board the server broadcast.
+  {
+    const a = flickTrajectory(origin, 7.3, -11.9);
+    const b = flickTrajectory(origin, 7.3, -11.9);
+    assert(a.to.x === b.to.x && a.to.y === b.to.y && a.duration === b.duration, "flick: the same strike slides the same way");
+  }
+
+  ok("flick physics verified (pull sets speed, friction sets distance, momentum carries it)");
+}
+
 // --- Flick: every shot is recorded, including the ones that end badly ---
 // The stone only sometimes stays where the flick sent it — a shot off the board
 // or a spent third flick puts it back — so `lastShot` is the only way a client
@@ -354,10 +450,12 @@ function ok(msg: string) {
     const shot = res.state.lastShot!;
     assert(shot !== null && shot.outcome === "open", `flick: expected an open shot, got ${shot?.outcome}`);
     assert(shot.player === 0 && shot.claimed === 0, "flick: an open shot claims nothing");
+    const expected = flickTrajectory(from, 10, 10);
     assert(
-      shot.from.x === from.x && shot.from.y === from.y && shot.to.x === from.x + 10 && shot.to.y === from.y + 10,
-      "flick: the shot records where the stone flew from and to",
+      shot.from.x === from.x && shot.from.y === from.y && shot.to.x === expected.to.x && shot.to.y === expected.to.y,
+      "flick: the shot records where the stone was struck from and where it slid to",
     );
+    assert(shot.dx === 10 && shot.dy === 10, "flick: and the impulse, so the slide can be replayed");
     assert(res.state.turn === 0 && res.state.flicksLeft === 2, "flick: the turn goes on with one flick spent");
   }
 
@@ -366,7 +464,7 @@ function ok(msg: string) {
   {
     const state = fresh();
     const from = state.stones[0];
-    const res = flickEngine.applyMove(state, { kind: "flick", dx: -FLICK_MAX, dy: 0 }, 0);
+    const res = flickEngine.applyMove(state, { kind: "flick", dx: -FLICK_MAX_PULL, dy: 0 }, 0);
     const shot = res.state.lastShot!;
     assert(shot.outcome === "off", `flick: a shot off the board should record "off", got ${shot.outcome}`);
     assert(shot.to.x < 0, "flick: the recorded landing spot is off the board, not clamped to it");

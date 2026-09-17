@@ -7,20 +7,28 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import {
-  FLICK_MAX,
+  FLICK_MAX_PULL,
   FLICK_SIZE,
+  flickExitTime,
+  flickPositionAt,
+  flickTrajectory,
   type FlickGrid,
   type FlickMove,
   type FlickPos,
   type FlickShot,
   type FlickState,
+  type FlickTrajectory,
   type PlayerIndex,
 } from "@board-online/shared";
 import { playSound } from "../../lib/sound.js";
 import type { GameViewProps } from "./types.js";
 
 const SIZE = FLICK_SIZE;
-const MAX_FLICK = FLICK_MAX;
+const MAX_PULL = FLICK_MAX_PULL;
+/** How long the aim ray is drawn at full power. Deliberately not how far the stone goes. */
+const AIM_RAY = 12;
+/** A beat after the stone leaves the board, so it is clearly gone before the turn moves on. */
+const OFF_BOARD_TAIL = 0.12;
 
 const FRAME = 2;
 const VB = SIZE + FRAME * 2;
@@ -36,19 +44,14 @@ const CREAM = "#f5f3ee";
 
 interface Flight {
   shot: FlickShot;
-  /** The board as it looked before the shot, so claimed land appears when the stone lands. */
+  /** The slide itself, rebuilt from the impulse — the same one the engine resolved. */
+  traj: FlickTrajectory;
+  /** How long to run it for, in seconds: the whole slide, or up to the stone leaving the board. */
+  runFor: number;
+  /** The board as it looked before the shot, so claimed land appears when the stone stops. */
   grid: FlickGrid;
   /** The trail traced so far this turn, for the same reason. */
   path: FlickPos[];
-  ms: number;
-}
-
-function clampCell(v: number): number {
-  return Math.min(SIZE - 1, Math.max(0, Math.floor(v)));
-}
-
-function ownerAt(grid: FlickGrid, p: FlickPos): PlayerIndex | null {
-  return grid[clampCell(p.y)][clampCell(p.x)];
 }
 
 function clampVector(dx: number, dy: number, max: number): { dx: number; dy: number; power: number } {
@@ -64,6 +67,25 @@ function toSvg(p: FlickPos): { x: number; y: number } {
 
 function polygonPoints(path: FlickPos[]): string {
   return path.map((p) => `${p.x + FRAME},${p.y + FRAME}`).join(" ");
+}
+
+/** A small triangle at `tip`, pointing away from `from`. */
+function arrowHead(from: FlickPos, tip: FlickPos): string {
+  const dx = tip.x - from.x;
+  const dy = tip.y - from.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const back = 1.7;
+  const side = 0.95;
+  const bx = tip.x - ux * back;
+  const by = tip.y - uy * back;
+  const pts: FlickPos[] = [
+    tip,
+    { x: bx - uy * side, y: by + ux * side },
+    { x: bx + uy * side, y: by - ux * side },
+  ];
+  return polygonPoints(pts);
 }
 
 /** One SVG path per owner, built from unit-square subpaths — far cheaper to render/diff
@@ -93,11 +115,6 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 }
 
-/** Sliding-stone feel: quick off the mark, coasting to a stop. */
-function easeOut(t: number): number {
-  return 1 - (1 - t) * (1 - t) * (1 - t);
-}
-
 export default function FlickBoard({ state, onMove, interactive, you }: GameViewProps<FlickState, FlickMove>) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   /** How far the stone has been pulled back. The shot goes the opposite way. */
@@ -106,7 +123,8 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
   pullRef.current = pull;
 
   const [flight, setFlight] = useState<Flight | null>(null);
-  const [progress, setProgress] = useState(0);
+  /** Seconds into the slide being played. */
+  const [elapsed, setElapsed] = useState(0);
 
   // The state arrives with the shot already resolved, so the board it is about
   // is the one rendered *before* it. Captured here, one effect ahead of the one
@@ -125,28 +143,39 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
     }
     lastKeyRef.current = key;
 
-    const distance = Math.hypot(shot.to.x - shot.from.x, shot.to.y - shot.from.y);
-    const ms = prefersReducedMotion() ? 1 : Math.min(620, 140 + distance * 24);
+    // The impulse is all it takes to get the whole slide back, so what every
+    // client draws is the very motion the engine resolved the shot with.
+    const traj = flickTrajectory(shot.from, shot.dx, shot.dy);
+    const exit = flickExitTime(traj);
+    const runFor = exit === null ? traj.duration : Math.min(traj.duration, exit + OFF_BOARD_TAIL);
     playSound("move");
-    setFlight({ shot, grid: before.grid, path: before.path, ms });
-    setProgress(0);
+    setFlight({ shot, traj, runFor, grid: before.grid, path: before.path });
+    setElapsed(0);
   }, [key, state]);
 
   // Runs the flight itself. Split from the effect above so it only ever restarts
   // when a genuinely new shot arrives, not on every re-render in between.
   useEffect(() => {
     if (!flight) return;
+    const land = () => {
+      playSound(flight.shot.outcome === "claim" ? "capture" : "place");
+      setFlight(null);
+    };
+    if (prefersReducedMotion() || flight.runFor <= 0) {
+      setElapsed(flight.runFor);
+      const done = window.setTimeout(land, 0);
+      return () => window.clearTimeout(done);
+    }
     let raf = 0;
     const started = performance.now();
     const step = (now: number) => {
-      const t = Math.min(1, (now - started) / flight.ms);
-      setProgress(t);
-      if (t < 1) {
+      const t = (now - started) / 1000;
+      setElapsed(t);
+      if (t < flight.runFor) {
         raf = requestAnimationFrame(step);
         return;
       }
-      playSound(flight.shot.outcome === "claim" ? "capture" : "place");
-      setFlight(null);
+      land();
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
@@ -210,7 +239,7 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
   function handlePointerMove(e: RPointerEvent<SVGSVGElement>) {
     if (!canPlay || !pullRef.current) return;
     const p = boardPointFromClient(e.clientX, e.clientY);
-    setPull(clampVector(p.x - activeStone.x, p.y - activeStone.y, MAX_FLICK));
+    setPull(clampVector(p.x - activeStone.x, p.y - activeStone.y, MAX_PULL));
   }
 
   function handlePointerUp(e: RPointerEvent<SVGSVGElement>) {
@@ -229,21 +258,22 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
     onMove({ kind: "giveup" });
   }
 
-  // --- aiming preview -------------------------------------------------------
-  const launch = pull ? { x: -pull.dx, y: -pull.dy } : null;
-  const target = launch ? { x: activeStone.x + launch.x, y: activeStone.y + launch.y } : null;
-  const targetOnBoard = target ? target.x >= 0 && target.x <= SIZE && target.y >= 0 && target.y <= SIZE : false;
-  const willClaim = target !== null && targetOnBoard && ownerAt(state.grid, target) === mover;
-  const previewPoints = target ? polygonPoints([...state.path, target]) : "";
-  const aimColor = !targetOnBoard ? "#c0362c" : willClaim ? "#1f9d55" : moverColor;
+  // --- aiming ---------------------------------------------------------------
+  // Which way and how hard, and nothing else. Where the stone comes to rest is
+  // the shot itself — pointing at the spot in advance would take the game out of
+  // the flick and put it in the aiming line.
+  const power = pull ? pull.power / MAX_PULL : 0;
+  /** A fixed-length ray in the direction of the strike, scaled only by how hard it is. */
+  const aimTip: FlickPos | null =
+    pull && pull.power > 0
+      ? {
+          x: activeStone.x - (pull.dx / pull.power) * AIM_RAY * (0.35 + 0.65 * power),
+          y: activeStone.y - (pull.dy / pull.power) * AIM_RAY * (0.35 + 0.65 * power),
+        }
+      : null;
 
   // --- what to draw the stone and its trail from ----------------------------
-  const flyingAt: FlickPos | null = flight
-    ? {
-        x: flight.shot.from.x + (flight.shot.to.x - flight.shot.from.x) * easeOut(progress),
-        y: flight.shot.from.y + (flight.shot.to.y - flight.shot.from.y) * easeOut(progress),
-      }
-    : null;
+  const flyingAt: FlickPos | null = flight ? flickPositionAt(flight.traj, elapsed) : null;
   // The stone leans into the pull rather than following it all the way: a stone
   // resting in its home corner is usually pulled *past* the corner, and a stone
   // drawn out there would sit off the board with nothing to see.
@@ -283,14 +313,16 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
         </div>
       </div>
 
-      <p className="fb-reason" key={`${state.round}:${state.flicksLeft}`}>
-        {flight
-          ? " "
-          : state.status === "ongoing" && state.reason
-            ? state.reason
-            : canPlay
-              ? "돌을 잡아 뒤로 당겼다 놓으면 반대쪽으로 날아갑니다."
-              : " "}
+      <p className={`fb-reason${pull ? " fb-reason--power" : ""}`} key={pull ? "aim" : `${state.round}:${state.flicksLeft}`}>
+        {pull
+          ? `힘 ${Math.round(power * 100)}%`
+          : flight
+            ? " "
+            : state.status === "ongoing" && state.reason
+              ? state.reason
+              : canPlay
+                ? "돌을 잡아 뒤로 당겼다 놓으면 그만큼 세게 반대쪽으로 미끄러집니다."
+                : " "}
       </p>
 
       <svg
@@ -319,10 +351,9 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
         <path d={p0Path} fill={PLAYER_COLORS[0]} fillOpacity={0.82} pointerEvents="none" />
         <path d={p1Path} fill={PLAYER_COLORS[1]} fillOpacity={0.82} pointerEvents="none" />
 
-        {willClaim && previewPoints && (
-          <polygon points={previewPoints} fill={moverColor} fillOpacity={0.28} stroke={moverColor} strokeWidth={0.3} pointerEvents="none" />
-        )}
-
+        {/* The land a shot would win used to be shaded in while aiming. It is not
+            any more: it gave away exactly where the stone was going to stop, which
+            is the one thing this game is about finding out. */}
         {trailPoints && (
           <polyline
             points={trailPoints}
@@ -339,17 +370,15 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
           return <circle key={i} cx={sp.x} cy={sp.y} r={0.6} fill={shooterColor} pointerEvents="none" />;
         })}
 
-        {pull && target && handAt && (
+        {pull && aimTip && handAt && (
           <>
-            {/* The band: your hand, through the stone, on to where the shot lands.
-                Everything gets a white underlay so it stays readable over either
-                player's land. */}
+            {/* The band you are stretching, from the stone back to your hand. */}
             <line
               x1={toSvg(handAt).x}
               y1={toSvg(handAt).y}
               x2={svgStone.x}
               y2={svgStone.y}
-              stroke={aimColor}
+              stroke={moverColor}
               strokeWidth={0.55}
               strokeLinecap="round"
               opacity={0.7}
@@ -360,16 +389,20 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
               cy={toSvg(handAt).y}
               r={1.4}
               fill="none"
-              stroke={aimColor}
+              stroke={moverColor}
               strokeWidth={0.4}
               opacity={0.7}
               pointerEvents="none"
             />
+            {/* And the way it will go. It grows a little with the strike so the two
+                cues do not fight, but it stops well short of anything the stone
+                could reach — it is an arrow, not a landing mark. The white underlay
+                keeps it readable over either player's land. */}
             <line
               x1={svgStone.x}
               y1={svgStone.y}
-              x2={toSvg(target).x}
-              y2={toSvg(target).y}
+              x2={toSvg(aimTip).x}
+              y2={toSvg(aimTip).y}
               stroke="#ffffff"
               strokeWidth={1.1}
               strokeLinecap="round"
@@ -379,24 +412,22 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
             <line
               x1={svgStone.x}
               y1={svgStone.y}
-              x2={toSvg(target).x}
-              y2={toSvg(target).y}
-              stroke={aimColor}
-              strokeWidth={0.5}
+              x2={toSvg(aimTip).x}
+              y2={toSvg(aimTip).y}
+              stroke={moverColor}
+              strokeWidth={0.55}
               strokeDasharray="1.6 1.1"
               strokeLinecap="round"
               pointerEvents="none"
             />
-            <circle
-              cx={toSvg(target).x}
-              cy={toSvg(target).y}
-              r={1.5}
-              fill="#ffffff"
-              stroke={aimColor}
-              strokeWidth={0.55}
+            <polygon
+              points={arrowHead(stoneAt, aimTip)}
+              fill={moverColor}
+              stroke="#ffffff"
+              strokeWidth={0.22}
+              strokeLinejoin="round"
               pointerEvents="none"
             />
-            <circle cx={toSvg(target).x} cy={toSvg(target).y} r={0.6} fill={aimColor} pointerEvents="none" />
           </>
         )}
 
@@ -459,6 +490,7 @@ export default function FlickBoard({ state, onMove, interactive, you }: GameView
         .fb-pip { width: 10px; height: 10px; border-radius: 50%; background: #e4e7eb; border: 1.5px solid #cbd2d9; display: inline-block; }
         .fb-pip--on { background: var(--pip-color, #2f6bff); border-color: transparent; }
         .fb-reason { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 600; color: #7b8794; min-height: 1.2em; animation: fb-fade-in 220ms ease-out; }
+        .fb-reason--power { color: #1f2933; font-variant-numeric: tabular-nums; animation: none; }
         .fb-svg { width: 100%; height: auto; display: block; touch-action: none; }
         .fb-stone--ready { animation: fb-pulse 1.6s ease-in-out infinite; }
         .fb-actions { display: flex; justify-content: center; }
