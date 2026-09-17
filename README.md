@@ -64,6 +64,8 @@ npm run test:ai        # AI_GAME=gomoku 처럼 게임 하나만 돌릴 수도 �
 npm run typecheck      # shared / server / client 전부
 ```
 
+PR과 `main` 푸시마다 GitHub Actions(`.github/workflows/ci.yml`)가 위 세 가지와 클라이언트 빌드를 돌립니다.
+
 ## 컴퓨터 상대
 
 홈 화면에서 **컴퓨터 대전**을 선택한 뒤 게임 카드를 누르면 `/ai/<game>`의 시작 설정 화면이 열립니다. 난이도와 선후공, 장기의 마상 배치를 고르고 **게임 시작**을 누르면 컴퓨터가 수를 둡니다.
