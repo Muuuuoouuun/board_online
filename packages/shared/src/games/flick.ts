@@ -4,11 +4,18 @@ import type { ApplyResult, BoardPiece, GameEngine, PlayerIndex, StatusResult } f
  * 땅따먹기 (territory capture) — stone-flicking variant.
  *
  * Each player owns one stone that rests inside their own territory. On your
- * turn you flick it up to three times; if it is back inside your own land
- * after flick 1, 2 or 3, the path you traced (closed by the implicit return
- * into your land) becomes yours. If the stone leaves the board, or is still
- * outside your land after the third flick, you claim nothing and the stone
- * is put back where the turn started.
+ * turn you flick it up to three times — grab the stone, pull it back and let
+ * go, and it flies the other way, as far as you pulled. If it is back inside
+ * your own land after flick 1, 2 or 3, the path you traced (closed by the
+ * implicit return into your land) becomes yours. If the stone leaves the
+ * board, or is still outside your land after the third flick, you claim
+ * nothing and the stone is put back where the turn started.
+ *
+ * Every flick is recorded in `lastShot`, because where the stone *tried* to go
+ * is not always where it ends up: a shot off the board, or a third shot that
+ * misses home, puts the stone back where the turn started. Without the record
+ * a client would only ever see the stone reappear at its resting spot, so
+ * neither player could watch the shot that just failed.
  *
  * ---
  * CONTRACT NOTE — the one deliberate departure in this engine:
@@ -49,6 +56,28 @@ export type FlickGrid = (PlayerIndex | null)[][];
 
 export type FlickMove = { kind: "flick"; dx: number; dy: number } | { kind: "giveup" };
 
+/** What became of a flick, in the order the engine decides it. */
+export type FlickOutcome =
+  /** landed back in the shooter's own land: the traced path was claimed */
+  | "claim"
+  /** flew off the board: nothing claimed, stone returns to where the turn started */
+  | "off"
+  /** third flick, still outside their land: same ending as "off" */
+  | "spent"
+  /** landed on open (or the opponent's) land with flicks to spare: the turn goes on */
+  | "open";
+
+/** The flick just played, so every client can animate the same shot. */
+export interface FlickShot {
+  player: PlayerIndex;
+  /** Where the stone was flicked from, and where the flick sent it. `to` may be off the board. */
+  from: FlickPos;
+  to: FlickPos;
+  outcome: FlickOutcome;
+  /** Cells newly claimed by this shot; 0 unless `outcome` is "claim". */
+  claimed: number;
+}
+
 export interface FlickState {
   grid: FlickGrid;
   /** Each player's current stone position — their resting spot between turns, and its
@@ -62,6 +91,8 @@ export interface FlickState {
   path: FlickPos[];
   /** Number of turns completed so far (by either player) — drives the round-limit ending. */
   round: number;
+  /** The flick just played, or null at the start of a game and after a passed turn. */
+  lastShot: FlickShot | null;
   turn: PlayerIndex;
   status: "ongoing" | "win" | "draw";
   winner: PlayerIndex | null;
@@ -187,7 +218,14 @@ function computeEndStatus(grid: FlickGrid, round: number): StatusResult {
  *  for whoever moves next, advances round/turn, and folds in the end-of-game check. `outcomeReason`
  *  describes what just happened and is kept only while the game is still ongoing — once the game
  *  ends, the final win/draw reason takes over. */
-function endTurn(state: FlickState, grid: FlickGrid, player: PlayerIndex, restingPos: FlickPos, outcomeReason: string): FlickState {
+function endTurn(
+  state: FlickState,
+  grid: FlickGrid,
+  player: PlayerIndex,
+  restingPos: FlickPos,
+  outcomeReason: string,
+  shot: FlickShot | null,
+): FlickState {
   const nextPlayer: PlayerIndex = player === 0 ? 1 : 0;
   const stones: [FlickPos, FlickPos] = [state.stones[0], state.stones[1]];
   stones[player] = restingPos;
@@ -199,6 +237,7 @@ function endTurn(state: FlickState, grid: FlickGrid, player: PlayerIndex, restin
     flicksLeft: 3,
     path: [stones[nextPlayer]],
     round,
+    lastShot: shot,
     turn: nextPlayer,
     status: end.status,
     winner: end.winner,
@@ -234,6 +273,7 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
       flicksLeft: 3,
       path: [STONE_START[0]],
       round: 0,
+      lastShot: null,
       turn: 0,
       status: "ongoing",
       winner: null,
@@ -266,7 +306,8 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
     const start = state.path[0];
 
     if (move.kind === "giveup") {
-      const nextState = endTurn(state, state.grid, player, start, "차례를 포기했습니다.");
+      // No shot to replay, so clients have nothing to animate.
+      const nextState = endTurn(state, state.grid, player, start, "차례를 포기했습니다.", null);
       return { ok: true, state: nextState, status: { status: nextState.status, winner: nextState.winner, reason: nextState.reason } };
     }
 
@@ -287,8 +328,17 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
     const to: FlickPos = { x: from.x + dx, y: from.y + dy };
     const offBoard = to.x < 0 || to.x > SIZE || to.y < 0 || to.y > SIZE;
 
+    const shot = (outcome: FlickOutcome, claimed = 0): FlickShot => ({ player, from, to, outcome, claimed });
+
     if (offBoard) {
-      const nextState = endTurn(state, state.grid, player, start, "돌이 보드를 벗어나 차례가 넘어갔습니다.");
+      const nextState = endTurn(
+        state,
+        state.grid,
+        player,
+        start,
+        "돌이 보드를 벗어나 차례가 넘어갔습니다.",
+        shot("off"),
+      );
       return { ok: true, state: nextState, status: { status: nextState.status, winner: nextState.winner, reason: nextState.reason } };
     }
 
@@ -298,18 +348,25 @@ export const flickEngine: GameEngine<FlickState, FlickMove> = {
 
     if (landedHome) {
       const { grid, claimed } = claimPolygon(state.grid, newPath, player);
-      const nextState = endTurn(state, grid, player, to, `땅을 ${claimed}칸 차지했습니다!`);
+      const nextState = endTurn(state, grid, player, to, `땅을 ${claimed}칸 차지했습니다!`, shot("claim", claimed));
       return { ok: true, state: nextState, status: { status: nextState.status, winner: nextState.winner, reason: nextState.reason } };
     }
 
     if (flicksLeft <= 0) {
-      const nextState = endTurn(state, state.grid, player, start, "세 번 튕겼지만 자기 땅으로 돌아오지 못했습니다.");
+      const nextState = endTurn(
+        state,
+        state.grid,
+        player,
+        start,
+        "세 번 튕겼지만 자기 땅으로 돌아오지 못했습니다.",
+        shot("spent"),
+      );
       return { ok: true, state: nextState, status: { status: nextState.status, winner: nextState.winner, reason: nextState.reason } };
     }
 
     const stones: [FlickPos, FlickPos] = [state.stones[0], state.stones[1]];
     stones[player] = to;
-    const nextState: FlickState = { ...state, stones, path: newPath, flicksLeft };
+    const nextState: FlickState = { ...state, stones, path: newPath, flicksLeft, lastShot: shot("open") };
     return { ok: true, state: nextState, status: current };
   },
 

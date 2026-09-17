@@ -15,12 +15,19 @@ export type { ReversiState } from "./games/reversi.js";
 export type { CheckersState } from "./games/checkers.js";
 export type { ChessState } from "./games/chess.js";
 export type { JanggiState, Formation } from "./games/janggi.js";
-export type { FlickState, FlickMove, FlickPos, FlickGrid } from "./games/flick.js";
+export type { FlickState, FlickMove, FlickPos, FlickGrid, FlickShot, FlickOutcome } from "./games/flick.js";
 export { SIZE as FLICK_SIZE, MAX_FLICK as FLICK_MAX } from "./games/flick.js";
 export type { GonuState, PointId, GonuBoardMap } from "./games/gonu.js";
 export { POINTS, POINT_IDS, EDGES } from "./games/gonu.js";
 export type { YutState, YutMove, YutPos, YutThrowResult, TrackPos as YutTrackPos } from "./games/yut.js";
-export type { TerritoryState, TerritoryMove, TerritoryCell } from "./games/territory.js";
+export type { TerritoryState, TerritoryMove, TerritoryCell, TerritoryLineError } from "./games/territory.js";
+export {
+  MAX_LINE as TERRITORY_MAX_LINE,
+  territoryCanStart,
+  territoryCanExtend,
+  territoryPreview,
+  territoryLineErrorText,
+} from "./games/territory.js";
 
 export const ENGINES: Partial<Record<GameId, GameEngine<any, any>>> = {
   gomoku: gomokuEngine,

@@ -118,16 +118,26 @@ function GameMotif({ id }: { id: GameId }) {
       {id === "territory" && (
         <>
           <rect x="8" y="8" width="48" height="48" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
-          <path d="M8 8 H32 V20 H20 V32 H8 Z" fill="#2f6bff" opacity="0.75" />
-          <path d="M56 56 H32 V44 H44 V32 H56 Z" fill="#d4622a" opacity="0.75" />
+          <g stroke="#c9b48c" strokeWidth="0.9" opacity="0.8">
+            {[16, 24, 32, 40, 48].map((v) => (
+              <g key={v}>
+                <line x1={v} y1="8" x2={v} y2="56" />
+                <line x1="8" y1={v} x2="56" y2={v} />
+              </g>
+            ))}
+          </g>
+          <path d="M8 8 H32 V24 H8 Z" fill="#2f6bff" opacity="0.75" />
+          <path d="M56 56 H40 V40 H56 Z" fill="#d4622a" opacity="0.75" />
+          {/* the patch the stroke below just closed off */}
+          <rect x="16" y="24" width="16" height="16" fill="#2f6bff" opacity="0.28" />
+          {/* out of your land along the grid lines and back into it */}
           <polyline
-            points="32,20 40,20 40,28 32,28"
+            points="32,24 32,40 16,40 16,24"
             fill="none"
             stroke="#2f6bff"
             strokeWidth="2.6"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeDasharray="3 2.5"
           />
         </>
       )}
@@ -137,15 +147,20 @@ function GameMotif({ id }: { id: GameId }) {
           <rect x="8" y="8" width="48" height="48" rx="3" fill="#faf6ec" stroke="#c9b48c" strokeWidth="1.2" />
           <path d="M8 8 A24 24 0 0 1 32 32 L8 32 Z" fill="#2f6bff" opacity="0.7" />
           <path d="M56 56 A20 20 0 0 0 36 36 L56 36 Z" fill="#d4622a" opacity="0.7" />
+          {/* the band, pulled back behind the stone... */}
+          <line x1="16" y1="40" x2="26" y2="32" stroke="#5c3d21" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="16" cy="40" r="2.4" fill="none" stroke="#5c3d21" strokeWidth="1.2" />
+          {/* ...and where the stone goes when it is let loose */}
           <polyline
-            points="18,24 34,18 44,30"
+            points="26,32 46,16"
             fill="none"
             stroke="#5c3d21"
             strokeWidth="1.8"
             strokeDasharray="3 2"
             strokeLinecap="round"
           />
-          <circle cx="44" cy="30" r="4.6" fill="#2b2620" />
+          <circle cx="46" cy="16" r="2.6" fill="none" stroke="#5c3d21" strokeWidth="1.4" />
+          <circle cx="26" cy="32" r="4.6" fill="#2b2620" />
         </>
       )}
 
