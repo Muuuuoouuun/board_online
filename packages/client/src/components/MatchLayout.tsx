@@ -9,12 +9,13 @@ interface Props {
   status: string;
   onRules: () => void;
   onSetup?: () => void;
+  setupActionLabel?: string;
   children: ReactNode;
   details?: ReactNode;
   result?: ReactNode;
 }
 
-export default function MatchLayout({ meta, status, onRules, onSetup, children, details, result }: Props) {
+export default function MatchLayout({ meta, status, onRules, onSetup, setupActionLabel = "새 판 설정", children, details, result }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   return <main className="match-page" data-game={meta.id}>
     <header className="match-bar">
@@ -26,7 +27,7 @@ export default function MatchLayout({ meta, status, onRules, onSetup, children, 
     {menuOpen && <section id="match-menu" className="match-menu" aria-label="게임 메뉴">
       <button className="secondary-btn" onClick={() => { onRules(); setMenuOpen(false); }}>규칙</button>
       <SoundToggle />
-      {onSetup && <button className="secondary-btn" onClick={onSetup}>새 판 설정</button>}
+      {onSetup && <button className="secondary-btn" onClick={() => { onSetup(); setMenuOpen(false); }}>{setupActionLabel}</button>}
       {details && <div className="match-details">{details}</div>}
     </section>}
     <div className="match-stage"><div className="board-wrap match-board">{children}</div></div>

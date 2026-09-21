@@ -17,9 +17,10 @@ export default function Local() {
 
 function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: string }) {
   const engine = useMemo(() => getEngine(gameId), [gameId]);
+  const setupOptions = engine.meta.setupOptions;
   const [setupId, setSetupId] = useState(() => engine.meta.setupOptions?.find(option => option.id === initialSetup)?.id ?? engine.meta.setupOptions?.[0].id);
   const [state, setState] = useState(() => engine.createInitialState(setupId));
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(() => !setupOptions?.length);
   const [gameSerial, setGameSerial] = useState(0);
   const [showRules, setShowRules] = useState(false);
   const [resultDismissed, setResultDismissed] = useState(false);
@@ -40,7 +41,7 @@ function LocalGame({ gameId, initialSetup }: { gameId: GameId; initialSetup?: st
   if (!started) return <GameSetup meta={engine.meta} mode="같은 화면 2인 플레이" setupId={setupId} onSetupChange={setSetupId} onStart={startGame} />;
   const resultTitle = status.status === "win" ? `${engine.meta.playerLabels[status.winner!]} 승리!` : "무승부";
   return <>
-    <MatchLayout meta={engine.meta} status={status.status === "ongoing" ? `${engine.meta.playerLabels[turn]} 차례` : resultTitle} onRules={() => setShowRules(true)} onSetup={() => setStarted(false)}
+    <MatchLayout meta={engine.meta} status={status.status === "ongoing" ? `${engine.meta.playerLabels[turn]} 차례` : resultTitle} onRules={() => setShowRules(true)} onSetup={() => setupOptions?.length ? setStarted(false) : startGame()} setupActionLabel={setupOptions?.length ? "새 판 설정" : "새 판 시작"}
       details={<><p>같은 화면에서 번갈아 두세요. {GAME_DETAILS[gameId].instruction}</p><p>{GAME_DETAILS[gameId].hint}</p>{status.status !== "ongoing" && resultDismissed && <button className="rematch-btn" onClick={startGame}>다시 하기</button>}</>}
       result={<ResultModal open={status.status !== "ongoing" && !resultDismissed} kind={status.status === "win" ? "win" : "draw"} title={resultTitle} subtitle={status.reason} onRematch={startGame} onClose={() => setResultDismissed(true)} />}>
       <GameView key={gameSerial} engine={engine} state={state} pieces={engine.pieces(state)} legalMoves={legalMoves} onMove={handleMove} interactive={status.status === "ongoing"} you={null} />

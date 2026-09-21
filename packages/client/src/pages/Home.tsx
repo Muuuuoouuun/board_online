@@ -226,8 +226,7 @@ export default function Home() {
               const engine = getEngine(id);
               const detail = GAME_DETAILS[id];
               const action = mode === "online" ? "친구 초대하기" : "시작하기";
-              return (
-                <article className="home-card" key={id}>
+              const cardContents = <>
                   {id === "gonu" ? <div className="home-card-photo home-card-photo--gonu"><GonuPreview /></div> : <div
                     className="home-card-photo"
                     aria-hidden="true"
@@ -242,29 +241,43 @@ export default function Home() {
                     </p>
                     <div className="home-card-bottom">
                       <span>{engine.meta.playerLabels.join(" vs ")}</span>
-                      {mode === "online" ? (
-                        <button
-                          className="home-card-action"
-                          disabled={busyGame !== null}
-                          onClick={() => { setError(null); setSetupGame(id); }}
-                          aria-label={`${engine.meta.nameKo} 친구 초대하기`}
-                        >
-                          {busyGame === id ? "방 만드는 중..." : action}
-                          <ArrowIcon />
-                        </button>
-                      ) : (
-                        <Link
-                          className="home-card-action"
-                          to={playPath(id)}
-                          aria-label={`${engine.meta.nameKo} ${mode === "ai" ? "컴퓨터 대전" : "같은 화면"} 시작하기`}
-                        >
-                          {action}
-                          <ArrowIcon />
-                        </Link>
-                      )}
+                      <span className="home-card-action">
+                        {busyGame === id ? "방 만드는 중..." : action}
+                        <ArrowIcon />
+                      </span>
                     </div>
                   </div>
-                </article>
+                </>;
+              const label = `${engine.meta.nameKo} ${mode === "ai" ? "컴퓨터 대전 설정 열기" : mode === "online" ? "친구 초대하기" : "같은 화면에서 바로 시작"}`;
+
+              if (mode === "online") {
+                return (
+                  <button
+                    type="button"
+                    className="home-card home-card--clickable"
+                    key={id}
+                    disabled={busyGame !== null}
+                    onClick={() => {
+                      setError(null);
+                      if (engine.meta.setupOptions?.length) setSetupGame(id);
+                      else void handleCreate(id);
+                    }}
+                    aria-label={label}
+                  >
+                    {cardContents}
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  className="home-card home-card--clickable"
+                  key={id}
+                  to={playPath(id)}
+                  aria-label={label}
+                >
+                  {cardContents}
+                </Link>
               );
             })}
           </div>

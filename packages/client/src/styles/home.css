@@ -261,25 +261,42 @@
   gap: 22px 20px;
 }
 .home-card {
+  width: 100%;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--bo-line);
   border-radius: 9px;
   background: rgb(255 253 248 / 0.8);
   display: flex;
   flex-direction: column;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
   transition:
     transform 0.2s,
     box-shadow 0.2s,
     border-color 0.2s;
+}
+.home-card--clickable {
+  cursor: pointer;
 }
 .home-card:hover {
   transform: translateY(-3px);
   border-color: #bcbfaf;
   box-shadow: 0 10px 24px #3d35250c;
 }
+.home-card:focus-visible {
+  outline: 3px solid var(--bo-accent);
+  outline-offset: 3px;
+}
+.home-card:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
 .home-card-photo {
   width: 100%;
-  aspect-ratio: 2.45;
+  aspect-ratio: 2.05;
   background-image: url("/art/game-atlas.webp");
   background-size: 300% auto;
   background-repeat: no-repeat;
